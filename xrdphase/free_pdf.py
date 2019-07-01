@@ -6,19 +6,23 @@ from ipywidgets import widgets, interact
 from IPython.display import display
 from scipy.optimize import curve_fit
 
+
 def gauss_func(x,w):
     uw = abs(w)
     amp = 1.0/(w*np.sqrt(2.0*np.pi))
     return amp*np.exp(-((x)**2.0)/(2.0*uw**2.0))
+
 
 def lorz_func(x,w):
     #return 1.0/(x**2+1.0)
     uw = abs(w)
     return (1.0/np.pi)*(.5*uw)/(x**2.0 + (.5*uw)**2.0)
 
+
 def pv_func(x,w,mixing,amp):
     val_zero = ((lorz_func(0,w))*(1-mixing)) + amp*(gauss_func(0,w)*mixing)
     return (amp/val_zero)*(((lorz_func(x,w))*(1-mixing)) + amp*(gauss_func(x,w)*mixing))
+
 
 def fit_pv_to_sq(q,sq,qmin=10,qmax=25,first_guess=([30,.5,2])):
     ### initial params are w=30, mixing=.5, amp=2 (unless specific with first_guess=([30,.5,2]))
@@ -32,15 +36,18 @@ def pv_v0_func(x,w,mixing,amp,c0):
     val_zero = ((lorz_func(0,w))*(1-mixing)) + amp*(gauss_func(0,w)*mixing)
     return (amp/val_zero)*(((lorz_func(x,w))*(1-mixing)) + amp*(gauss_func(x,w)*mixing)) + c0
 
+
 def fit_pv_n0_to_sq(q,sq,qmin=10,qmax=25,first_guess=([30,.5,2,0])):
     qcut, sqcut = cut_data(q,sq,qmin,qmax)
     popt, pcov = curve_fit(pv_v0_func, qcut, sqcut, p0=first_guess,
                            bounds=([1,0,.000001,-100],[30,1,10,100]))
     return np.array(pv_v0_func(q,*popt))
 
+
 def pv_v1_func(x,w,mixing,amp,c0,c1):
     val_zero = ((lorz_func(0,w))*(1-mixing)) + amp*(gauss_func(0,w)*mixing)
     return (amp/val_zero)*(((lorz_func(x,w))*(1-mixing)) + amp*(gauss_func(x,w)*mixing)) + c0 +x*c1
+
 
 def fit_pv_n1_to_sq(q,sq,qmin=10,qmax=25,first_guess=([30,.5,2,0,0])):
     qcut, sqcut = cut_data(q,sq,qmin,qmax)
@@ -48,9 +55,11 @@ def fit_pv_n1_to_sq(q,sq,qmin=10,qmax=25,first_guess=([30,.5,2,0,0])):
                            bounds=([1,0,.000001,-10,-10],[30,1,10,10,10]))
     return np.array(pv_v1_func(q,*popt))
 
+
 def pv_v2_func(x,w,mixing,amp,c0,c1,c2):
     val_zero = ((lorz_func(0,w))*(1-mixing)) + amp*(gauss_func(0,w)*mixing)
     return (amp/val_zero)*(((lorz_func(x,w))*(1-mixing)) + amp*(gauss_func(x,w)*mixing)) + c0 +x*c1+x*c2**2
+
 
 def fit_pv_n2_to_sq(q,sq,qmin=10,qmax=25,first_guess=([30,.5,2,0,0,0])):
     qcut, sqcut = cut_data(q,sq,qmin,qmax)
@@ -59,74 +68,72 @@ def fit_pv_n2_to_sq(q,sq,qmin=10,qmax=25,first_guess=([30,.5,2,0,0,0])):
     return np.array(pv_v2_func(q,*popt))
 
 
-
 def sum_scans_rng(df_sq, scan_min, scan_max, df_pc):
     avg_q = np.array(df_sq.index)
     avg_sq = np.zeros(len(avg_q))
-    
+
     pc_sum = 0.0
     for i in range(len(df_sq.columns)):
         col = df_sq.columns[i]
         if col >= scan_min and col <= scan_max:
             pc_sum += df_pc.loc['pc',col]
-            
+
     print ('pc sum from that set : '+str(pc_sum))
     for i in range(len(df_sq.columns)):
         col = df_sq.columns[i]
         if col >= scan_min and col <= scan_max:
             this_pc = df_pc.loc['pc',col]
             avg_sq += df_sq.loc[:,col]*(this_pc/pc_sum)
-                
-    
+
     return np.array(avg_q), np.array(avg_sq)
+
 
 def sum_scans_list(df_sq, scan_list, df_pc):
     avg_q = np.array(df_sq.index)
     avg_sq = np.zeros(len(avg_q))
-    
+
     pc_sum = 0.0
     for i in range(len(df_sq.columns)):
         col = df_sq.columns[i]
         if col in scan_list:
             pc_sum += df_pc.loc['pc',col]
-            
+
     print ('pc sum from that set : '+str(pc_sum))
     for i in range(len(df_sq.columns)):
         col = df_sq.columns[i]
         if col in scan_list:
             this_pc = df_pc.loc['pc',col]
             avg_sq += df_sq.loc[:,col]*(this_pc/pc_sum)
-                
-    
-    return np.array(avg_q), np.array(avg_sq)  
 
-def fit_ndeg_to_sq(q,sq,qmin=10,qmax=31,ndeg=2):    
+    return np.array(avg_q), np.array(avg_sq)
+
+
+def fit_ndeg_to_sq(q,sq,qmin=10,qmax=31,ndeg=2):
     qcut, sqcut = cut_data(q,sq,qmin,qmax)
 
     this_pfit = np.poly1d(np.polyfit(qcut,sqcut,ndeg))
     sqfit = this_pfit(q)
     return sqfit
-    
-    
+
+
 def  showme_reduction_fgbg_gr(q, _sqfg, _sqbg, rmin=.5,rmax=20,delr=.02,v_grmin=-13,v_grmax=13):
-    
+
     def f1(bgd_scaler,gauss_damp,gw,uqmax,uqmin,vis_bg_yadjust):
         if gauss_damp:
             r,bggr = make_gr_from_sq(q,(bgd_scaler*_sqbg)*gauss(q,gw,0),qmin=uqmin,
-                                   qmax=uqmax,rmin=rmin,rmax=rmax,delr=delr)    
+                                   qmax=uqmax,rmin=rmin,rmax=rmax,delr=delr)
         else:
             r,bggr = make_gr_from_sq(q,(bgd_scaler*_sqbg),qmin=uqmin,
-                                   qmax=uqmax,rmin=rmin,rmax=rmax,delr=delr)          
+                                   qmax=uqmax,rmin=rmin,rmax=rmax,delr=delr)
 
         if gauss_damp:
             r,fggr = make_gr_from_sq(q,(_sqfg)*gauss(q,gw,0),qmin=uqmin,
-                                   qmax=uqmax,rmin=rmin,rmax=rmax,delr=delr)    
+                                   qmax=uqmax,rmin=rmin,rmax=rmax,delr=delr)
         else:
             r,fggr = make_gr_from_sq(q,(_sqfg),qmin=uqmin,
-                                   qmax=uqmax,rmin=rmin,rmax=rmax,delr=delr)  
+                                   qmax=uqmax,rmin=rmin,rmax=rmax,delr=delr)
         gr = fggr - bggr
-        
-        
+
         plt.figure(figsize=(12,6))
 
         ax1=plt.subplot(211)
@@ -143,15 +150,15 @@ def  showme_reduction_fgbg_gr(q, _sqfg, _sqbg, rmin=.5,rmax=20,delr=.02,v_grmin=
         plt.xlabel('r')
         plt.ylabel('G(r)')
 
-    
     do_cont_update = widgets.Checkbox(value=True,description='Continuous Update')
 
     bgd_scaler=widgets.FloatSlider(min=-1.0,max=2.0,step=.01,value=1.0,continuous_update=do_cont_update.value,description='Rescale Bgd')
     gauss_damp=widgets.Cheox(value=False,description='Apply Damping to S(Q)')
     gw=widgets.FloatSlider(min=0.01,meax=30.0,step=.1,value=30.0,continuous_update=do_cont_update.value,description='Gauss Wid')
-    uqmax=widgets.FloatSlider(min=0.0,max=30.0,step=.1,value=30.0,continuous_update=do_cont_update.value,description='Qmax') 
+    uqmax=widgets.FloatSlider(min=0.0,max=30.0,step=.1,value=30.0,continuous_update=do_cont_update.value,description='Qmax')
     uqmin=widgets.FloatSlider(min=0,max=5,step=.1,value=1.0,continuous_update=do_cont_update.value,description='Qmin')
-    vis_bg_yadjust=widgets.FloatSlider(min=-20.,max=10.0,step=.1,value=0.0,continuous_update=do_cont_update.value,description='Bgd Offset')    
+    vis_bg_yadjust=widgets.FloatSlider(min=-20.,max=10.0,step=.1,value=0.0,continuous_update=do_cont_update.value,description='Bgd Offset')
+
 
     def update_const_update(*args):
         bgd_scaler.continuous_update = do_cont_update.value
@@ -159,7 +166,7 @@ def  showme_reduction_fgbg_gr(q, _sqfg, _sqbg, rmin=.5,rmax=20,delr=.02,v_grmin=
         uqmax.continuous_update = do_cont_update.value
         uqmin.continuous_update = do_cont_update.value
         vis_bg_yadjust.continuous_update = do_cont_update.value
-            
+
     do_cont_update.observe(update_const_update, 'value')
 
     row1_ui = widgets.HBox([bgd_scaler])
@@ -169,44 +176,43 @@ def  showme_reduction_fgbg_gr(q, _sqfg, _sqbg, rmin=.5,rmax=20,delr=.02,v_grmin=
 
     ui = widgets.VBox([row1_ui, row2_ui, row3_ui, row4_ui])
 
-
     out = widgets.interactive_output(f1, {'bgd_scaler':bgd_scaler,'gauss_damp':gauss_damp,'gw':gw,'uqmax':uqmax,'uqmin':uqmin,'vis_bg_yadjust':vis_bg_yadjust})
 
     display(ui, out,flex='flex-grow')
-    
-    
+
+
 def showme_reduction_sq_and_gr(q,_sqfg,_sqbg,v_qmin=0.0,v_qmax=30,v_imin=-2,v_imax=12,
-                                    rmin=.5,rmax=20,delr=.02,v_grmin=-13,v_grmax=13):   
-    
+                                    rmin=.5,rmax=20,delr=.02,v_grmin=-13,v_grmax=13):
+
+
     def f3(bgd_scaler,gauss_damp,gw,uqmax,uqmin,show_fq):
-        
+
         if gauss_damp:
             r,gr = make_gr_from_sq(q,(_sqfg-bgd_scaler*_sqbg)*gauss(q,gw,0),qmin=uqmin,
-                                   qmax=uqmax,rmin=rmin,rmax=rmax,delr=delr)    
+                                   qmax=uqmax,rmin=rmin,rmax=rmax,delr=delr)
         else:
             r,gr = make_gr_from_sq(q,(_sqfg-bgd_scaler*_sqbg),qmin=uqmin,
-                                   qmax=uqmax,rmin=rmin,rmax=rmax,delr=delr)    
-            
+                                   qmax=uqmax,rmin=rmin,rmax=rmax,delr=delr)
+
         plt.figure(figsize=(12,6))
         plt.subplot(121)
 
         if gauss_damp==False:
-            ugw = 9999.9    
+            ugw = 9999.9
         else:
             ugw = gw
             plt.plot(q,gauss(q,ugw,0),'r--')
-        
+
         if show_fq == False:
             plt.plot(q,_sqfg*gauss(q,ugw,0),'k')
             plt.plot(q,bgd_scaler*_sqbg*gauss(q,ugw,0),'b')
         else:
             plt.plot(q,q*_sqfg*gauss(q,ugw,0),'k')
-            plt.plot(q,q*bgd_scaler*_sqbg*gauss(q,ugw,0),'b')            
+            plt.plot(q,q*bgd_scaler*_sqbg*gauss(q,ugw,0),'b')
             plt.plot([v_qmin,v_qmax],[0,0],'k')
-        
+
         plt.axis([v_qmin,v_qmax,v_imin,v_imax])
-        
-        
+
         plt.xlabel('Q')
         if show_fq:
             plt.ylabel('F(Q)')
@@ -214,52 +220,55 @@ def showme_reduction_sq_and_gr(q,_sqfg,_sqbg,v_qmin=0.0,v_qmax=30,v_imin=-2,v_im
 
         else:
             plt.ylabel('S(Q)')
-        
+
         cymin, cymax = plt.ylim()
         plt.plot([uqmax,uqmax],[cymin,cymax],color='purple',ls='--')
         plt.plot([uqmin,uqmin],[cymin,cymax],color='purple',ls='--')
         plt.ylim(cymin,cymax)
-            
+
         plt.subplot(122)
         plt.plot(r,gr,'k',label='D2')
         plt.axis([rmin,rmax,v_grmin,v_grmax])
         plt.xlabel('r')
         plt.ylabel('G(r)')
-    #now to setup GUI and widgets 
+    #now to setup GUI and widgets
 
     do_cont_update = widgets.Checkbox(value=True,description='Continuous Update')
 
     bgd_scaler=widgets.FloatSlider(min=-1.0,max=2.0,step=.01,value=1.0,continuous_update=do_cont_update.value,description='Rescale Bgd')
     gauss_damp=widgets.Checkbox(value=False,description='Apply Damping to S(Q)')
     gw=widgets.FloatSlider(min=0.01,meax=30.0,step=.1,value=30.0,continuous_update=do_cont_update.value,description='Gauss Wid')
-    uqmax=widgets.FloatSlider(min=0.0,max=30.0,step=.1,value=30.0,continuous_update=do_cont_update.value,description='Qmax') 
+    uqmax=widgets.FloatSlider(min=0.0,max=30.0,step=.1,value=30.0,continuous_update=do_cont_update.value,description='Qmax')
     uqmin=widgets.FloatSlider(min=0,max=30.0,step=.1,value=1.0,continuous_update=do_cont_update.value,description='Qmin')
     show_fq = widgets.Checkbox(value=False,description='Display F(Q)')
-    
+
+
     def update_const_update(*args):
         bgd_scaler.continuous_update = do_cont_update.value
         gw.continuous_update = do_cont_update.value
         uqmax.continuous_update = do_cont_update.value
         uqmin.continuous_update = do_cont_update.value
-        
+
+
     def update_qmin_limits(*args):
         uqmin.max = uqmax.value
 
     do_cont_update.observe(update_const_update, 'value')
     uqmax.observe(update_qmin_limits, 'value')
-    
+
     row1_ui = widgets.HBox([bgd_scaler])
     row2_ui = widgets.HBox([gauss_damp,gw])
     row3_ui = widgets.HBox([uqmin, uqmax])
     row4_ui = widgets.HBox([show_fq, do_cont_update])
-    
+
     ui = widgets.VBox([row1_ui, row2_ui, row3_ui, row4_ui])
 
 
     out = widgets.interactive_output(f3, {'bgd_scaler':bgd_scaler,'gauss_damp':gauss_damp,'gw':gw,'uqmax':uqmax,'uqmin':uqmin,'show_fq':show_fq})
 
-    display(ui, out,flex='flex-grow')    
-    
+    display(ui, out,flex='flex-grow')
+
+
 def do_reduction_placzek_corrections(q,sqfg,bgd,rescale_bgd=1.0,plaz_type=None,
                                      gauss_damp=False,gw=20.0,qmax=None,qmin=None,
                                      rmin=0.0,rmax=20.0,delr=.02
@@ -267,11 +276,11 @@ def do_reduction_placzek_corrections(q,sqfg,bgd,rescale_bgd=1.0,plaz_type=None,
                                     skip_bgd = False, return_final_sq = False, force_qmax_type='Off'):
     """
     Perform r,PDF data reduction using the full suite of options available in the 'showme_reduction_placzek_corrections' widget.
-    
+
     Must pass q, sq(foreground), and sq(background).  Futher options listed below (with default values).
-    
+
     rescale_bgd = Scaling factor for background (1.0)
-    
+
     plaz_type = Method of correcting high-Q behavior, approximating a Placzek correction (None)
         'ndeg' = polynomial correction
         'pv' = Pseudo-Voight correction
@@ -279,56 +288,56 @@ def do_reduction_placzek_corrections(q,sqfg,bgd,rescale_bgd=1.0,plaz_type=None,
         'pvndeg1' = Pseudo-Voight + 1st order polynomial
         'pvndeg2' = Pseudo-Voight + 2nd order polynomial
         'None' = skip this correction
-        
+
     gauss_damp = Apply a gaussian damping envelope to the S(Q) data prior to transform (False)
-    
+
     gw = If gauss_damp is applied, the width of the Gaussian used in Q (20.0)
-    
+
     qmax = Value of Qmax to use in generation of PDF (default None=native Qmax of data)
-    
+
     qmin = Value of Qmin to use in generation of PDF (default None=native Qmin of data)
-    
+
     rmin = Lowest r-value calculated in the returned PDF (0.0)
-    
+
     rmax = Highest r-value calculated in the returned PDF (20.0)
-    
+
     delr = Spacing to use in r-binning of calculated PDF (0.02)
-    
+
     qminpla = Lower bound of range used to fit Placzek correction (10.0)
-    
+
     qmaxpla = Upper bound of range used to fit Placzek correction (30.0)
-    
+
     ndeg = If using polynomial as plaz_type, this is the degree of polynomial useed (2)
-    
+
     return_correction = Instead of returning the calculated r/G(r), returns the calculated Placzek correction (False)
-    
+
     return_final_sq = Instead of returning the calculated r/G(r), returns the fully corrected S(Q) (False)
-    
+
     force_qmax_type = Forces the final S(Q) to terminate at S(Qmax)=0.  Can help reduce high-frequency noise in PDF (Off)
-                                    
-    """                             
+
+    """
     #first, make netsq if bgd and/or damping is present
     q = np.array(q)
     sqfg = np.array(sqfg)
     bgd = np.array(bgd)
-    
+
     if skip_bgd:
         netsq = sqfg
     else:
         netsq = sqfg - bgd*rescale_bgd
 
-        
+
     if gauss_damp:
         netsq = netsq*gauss(q,gw,0)
-    
-        
+
+
     if force_qmax_type == 'Force Data (PreCorrection)':
         qcut, sqcut = cut_data(q,netsq,qmax-.5,qmax)
         mean_sqmax = np.mean(sqcut)
-        netsq -= mean_sqmax        
+        netsq -= mean_sqmax
 
     #now, apply a correction if requested
-    if plaz_type != None:       
+    if plaz_type != None:
         if plaz_type == 'Polynomial' or plaz_type == 'poly' or plaz_type == 'ndeg':
             sq_poly_fit = fit_ndeg_to_sq(q,netsq,ndeg=ndeg,qmin=qminpla,qmax=qmaxpla)
             this_fit = sq_poly_fit
@@ -349,58 +358,60 @@ def do_reduction_placzek_corrections(q,sqfg,bgd,rescale_bgd=1.0,plaz_type=None,
             this_fit = np.zeros(len(q))
     else:
         this_fit = np.zeros(len(q))
-            
+
     if force_qmax_type == 'Force Data' or force_qmax_type == 'Force Both (Independent)':
         qcut, sqcut = cut_data(q,netsq,qmax-.5,qmax)
         mean_sqmax = np.mean(sqcut)
         netsq -= mean_sqmax
-    if force_qmax_type == 'Force Correction' or force_qmax_type == 'Force Both (Independent)':            
+    if force_qmax_type == 'Force Correction' or force_qmax_type == 'Force Both (Independent)':
         qcut, sqcut = cut_data(q,this_fit,qmax-.5,qmax)
         mean_sqmax = np.mean(sqcut)
         this_fit -= mean_sqmax
-    if force_qmax_type == 'ReCorrection':            
+    if force_qmax_type == 'ReCorrection':
         qcut, sqcut = cut_data(q,netsq-this_fit,qmax-.5,qmax)
         mean_sqmax = np.mean(sqcut)
         this_fit += mean_sqmax
 
     netsq = netsq - this_fit
-    
+
     if return_correction:
         return this_fit
-    
+
     if return_final_sq:
         return netsq
-    
+
     #finally, generate PDF
     r,gr = make_gr_from_sq(q,netsq,qmin=qmin,qmax=qmax,rmin=rmin,rmax=rmax,delr=delr)
-    
+
     return r,gr
-    
+
+
 def showme_reduction_placzek_corrections(q,_sqfg,_sqbg,v_qmin=0.0,v_qmax=30,v_imin=-2,v_imax=12,
                                     rmin=.5,rmax=20,delr=.02,v_grmin=-13,v_grmax=13,figsize=(12,8)):
     q = np.array(q)
     _sqfg = np.array(_sqfg)
     _sqbg = np.array(_sqbg)
-    
+
+
     def f2(bgd_scaler,gauss_damp,gw,uqmax,uqmin,show_fq,ndeg,qminpla,qmaxpla,plaz_type,altplot_type,
-           vis_bg_yadjust,force_qmax_type):  
+           vis_bg_yadjust,force_qmax_type):
         #use_ndeg = False
-        
+
         plt.figure(figsize=figsize)
         ax1=plt.subplot(221)
 
         if gauss_damp==False:
-            ugw = 9999.9    
+            ugw = 9999.9
         else:
             ugw = gw
-        
+
         netsq = (_sqfg - bgd_scaler*_sqbg)*gauss(q,ugw,0)
-        
+
         if force_qmax_type == 'Force Data (PreCorrection)':
             qcut, sqcut = cut_data(q,netsq,uqmax-.5,uqmax)
             mean_sqmax = np.mean(sqcut)
-            netsq -= mean_sqmax        
-        
+            netsq -= mean_sqmax
+
         if plaz_type == 'Polynomial':
             sq_poly_fit = fit_ndeg_to_sq(q,netsq,ndeg=ndeg,qmin=qminpla,qmax=qmaxpla)
             this_fit = sq_poly_fit
@@ -421,57 +432,53 @@ def showme_reduction_placzek_corrections(q,_sqfg,_sqbg,v_qmin=0.0,v_qmax=30,v_im
             qcut, sqcut = cut_data(q,netsq,uqmax-.5,uqmax)
             mean_sqmax = np.mean(sqcut)
             netsq -= mean_sqmax
-        if force_qmax_type == 'Force Correction' or force_qmax_type == 'Force Both (Independent)':            
+        if force_qmax_type == 'Force Correction' or force_qmax_type == 'Force Both (Independent)':
             qcut, sqcut = cut_data(q,this_fit,uqmax-.5,uqmax)
             mean_sqmax = np.mean(sqcut)
             this_fit -= mean_sqmax
-        if force_qmax_type == 'ReCorrection':            
+        if force_qmax_type == 'ReCorrection':
             qcut, sqcut = cut_data(q,netsq-this_fit,uqmax-.5,uqmax)
             mean_sqmax = np.mean(sqcut)
             this_fit += mean_sqmax
-        
-        
+
         if show_fq == False:
             plt.plot(q,netsq,'k')
             plt.plot(q,this_fit,'r')
 
-
         else:
             plt.plot(q,q*netsq,'k')
             plt.plot(q,q*this_fit,'r')
-        
-        
-        
+
         cymin, cymax = plt.ylim()
         plt.plot([qminpla,qminpla],[cymin,cymax],color='green',ls='--')
         plt.plot([qmaxpla,qmaxpla],[cymin,cymax],color='purple',ls='--')
         plt.ylim(cymin,cymax)
-        
-        #plt.axis([v_qmin,v_qmax,v_imin,v_imax])        
+
+        #plt.axis([v_qmin,v_qmax,v_imin,v_imax])
         plt.xlabel('Q')
         if show_fq:
             plt.ylabel('F(Q)')
             plt.autoscale(enable=True,axis='y',tight=None)
         else:
             plt.ylabel('S(Q)')
-            
+
         if show_qminqmax.value == True:
             cymin, cymax = plt.ylim()
             plt.plot([uqmax,uqmax],[cymin,cymax],color='red',ls='--',alpha=.8)
             plt.plot([uqmin,uqmin],[cymin,cymax],color='red',ls='--',alpha=.8)
             plt.ylim(cymin,cymax)
-        
+
         plt.xlim(min(q),max(q))
-  
+
         r,gr_correction = make_gr_from_sq(q,this_fit,qmin=uqmin,
                         qmax=uqmax, rmin=rmin, rmax=rmax, delr=delr)
         r,gr_raw = make_gr_from_sq(q,netsq,qmin=uqmin,
-                        qmax=uqmax,rmin=rmin,rmax=rmax,delr=delr)  
-        
-        plt.subplot(222)       
-        
+                        qmax=uqmax,rmin=rmin,rmax=rmax,delr=delr)
+
+        plt.subplot(222)
+
         if altplot_type=='Zoomed Fit':
-            
+
             if show_fq:
                 plt.plot(q,q*netsq,'k')
                 plt.xlim(qminpla,qmaxpla)
@@ -485,12 +492,12 @@ def showme_reduction_placzek_corrections(q,_sqfg,_sqbg,v_qmin=0.0,v_qmax=30,v_im
                 plt.plot(q,this_fit,'r')
                 cutq,cutsq = cut_data(q,netsq,qminpla,qmaxpla)
                 plt.ylim(min(cutsq),max(cutsq))
-            
-        elif altplot_type=='Final SQ':    
+
+        elif altplot_type=='Final SQ':
             if show_fq:
                 plt.plot(q,q*(netsq-this_fit),'b')
                 cymin, cymax = plt.ylim()
-                
+
                 plt.ylabel('F(Q) [Final]')
                 plt.plot([0,30],[0,0],'k')
                 plt.ylim(cymin, cymax)
@@ -507,27 +514,23 @@ def showme_reduction_placzek_corrections(q,_sqfg,_sqbg,v_qmin=0.0,v_qmax=30,v_im
         elif altplot_type =='FG/BG S(Q)':
             if show_fq:
                 plt.plot(q,q*_sqfg*gauss(q,ugw,0),'purple')
-                plt.plot(q,q*bgd_scaler*_sqbg*gauss(q,ugw,0),'orange')      
+                plt.plot(q,q*bgd_scaler*_sqbg*gauss(q,ugw,0),'orange')
                 plt.xlim(min(q),max(q))
-                
+
             else:
                 plt.plot(q,_sqfg*gauss(q,ugw,0),'purple')
                 plt.plot(q,bgd_scaler*_sqbg*gauss(q,ugw,0),'orange')
                 plt.xlim(min(q),max(q))
-        
+
         elif altplot_type == 'FG/BG G(r)':
-            rt,gr_fg = make_gr_from_sq(q,_sqfg,qmin=uqmin,qmax=uqmax,rmin=0.80,rmax=5.0,delr=delr)  
-            rt,gr_bg = make_gr_from_sq(q,_sqbg*bgd_scaler,qmin=uqmin,qmax=uqmax,rmin=0.80,rmax=5.0,delr=delr)  
-            
+            rt,gr_fg = make_gr_from_sq(q,_sqfg,qmin=uqmin,qmax=uqmax,rmin=0.80,rmax=5.0,delr=delr)
+            rt,gr_bg = make_gr_from_sq(q,_sqbg*bgd_scaler,qmin=uqmin,qmax=uqmax,rmin=0.80,rmax=5.0,delr=delr)
+
             plt.plot(rt, gr_fg)
             plt.plot(rt, gr_bg+vis_bg_yadjust)
-            
-            
-            
-                
-                
-        plt.xlabel('Q')      
-        
+
+        plt.xlabel('Q')
+
         plt.subplot(223)
 
         plt.plot(r,gr_raw,'k')
@@ -535,41 +538,42 @@ def showme_reduction_placzek_corrections(q,_sqfg,_sqbg,v_qmin=0.0,v_qmax=30,v_im
         plt.xlim(min(r),max(r))
         plt.xlabel('r')
         plt.ylabel('G(r)')
-        
+
         plt.subplot(224)
-        
-        gr = gr_raw-gr_correction  
+
+        gr = gr_raw-gr_correction
         plt.plot(r,gr,'b')
-        plt.xlim(min(r),max(r))        
+        plt.xlim(min(r),max(r))
         plt.xlabel('r')
         plt.ylabel('G(r) [final]')
     #### Setup the GUI (gw,uqmax,uqmin,show_fq,ndeg,qminpla,qmaxpla,show_zoomed_fit)
-    
+
     do_cont_update = widgets.Checkbox(value=True,description='Continuous Update')
 
     bgd_scaler=widgets.FloatSlider(min=-1.0,max=2.0,step=.01,value=1.0,continuous_update=do_cont_update.value,
                                    description='Rescale Bgd')
     gauss_damp=widgets.Checkbox(value=False,description='Apply Damping to S(Q)')
     gw=widgets.FloatSlider(min=0.01,meax=30.0,step=.1,value=30.0,continuous_update=do_cont_update.value,description='Gauss Wid')
-    uqmax=widgets.FloatSlider(min=0.0,max=q[-1],step=.1,value=30.0,continuous_update=do_cont_update.value,description='Qmax') 
+    uqmax=widgets.FloatSlider(min=0.0,max=q[-1],step=.1,value=30.0,continuous_update=do_cont_update.value,description='Qmax')
     uqmin=widgets.FloatSlider(min=0,max=q[-1],step=.1,value=1.0,continuous_update=do_cont_update.value,description='Qmin')
     show_fq = widgets.Checkbox(value=False,description='Display F(Q)')
     ndeg = widgets.IntSlider(min=0,max=8,step=1,value=0,continuous_update=do_cont_update.value,description='Ndeg Value')
     qminpla=widgets.FloatSlider(min=0.0,max=q[-1],step=.1,value=10.0,continuous_update=do_cont_update.value,
-                                description='QMinPla') 
+                                description='QMinPla')
     qmaxpla=widgets.FloatSlider(min=0.0,max=q[-1],step=.1,value=30.0,continuous_update=do_cont_update.value,
-                                description='QMaxPla')    
+                                description='QMaxPla')
     show_qminqmax = widgets.Checkbox(value=False,description='Show QMin/QMax')
     plaz_type = widgets.Dropdown(options=['Polynomial','Pseudo-Voight','PVoight + n0','PVoight + n1','PVoight + n2'],
                                  value='Polynomial',description='Correction Type')
     altplot_type = widgets.Dropdown(options=['Final SQ','Zoomed Fit','FG/BG S(Q)','FG/BG G(r)'],
                                     value='Final SQ',description='Alt-Plot')
     vis_bg_yadjust=widgets.FloatSlider(min=-10.,max=10.0,step=.1,value=0.0,continuous_update=do_cont_update.value,
-                                       description='Bgd Offset')    
+                                       description='Bgd Offset')
     force_qmax_at_zero = widgets.Checkbox(value=False,description='Force S(Qmax)->0')
     force_qmax_type = widgets.Dropdown(options=['Off','ReCorrection','Force Both (Independent)',
                                                 'Force Data (PreCorrection)','Force Data','Force Correction'],
                                        value='Off',description='S(Qmax)->0')
+
 
     def update_const_update(*args):
         bgd_scaler.continuous_update = do_cont_update.value
@@ -580,12 +584,13 @@ def showme_reduction_placzek_corrections(q,_sqfg,_sqbg,v_qmin=0.0,v_qmax=30,v_im
         qminpla.continuous_update = do_cont_update.value
         qmaxpla.continuous_update = do_cont_update.value
         vis_bg_yadjust.continuous_update = do_cont_update.value
-        
+
+
     def update_qmin_limits(*args):
         qminpla.max = qmaxpla.value
         uqmin.max = uqmax.value
-        
-        
+
+
     def update_correction_type(*args):
         if plaz_type.value == 'Polynomial':
             #qminpla.value = 10.0
@@ -603,22 +608,22 @@ def showme_reduction_placzek_corrections(q,_sqfg,_sqbg,v_qmin=0.0,v_qmax=30,v_im
                 ndeg.value = 2
         #elif plaz_type.value == 'PVoight + n1':
         #    qminpla.value = 1.0
-        #    qmaxpla.value = 30.0            
-            
+        #    qmaxpla.value = 30.0
+
     plaz_type.observe(update_correction_type,'value')
     do_cont_update.observe(update_const_update, 'value')
     qmaxpla.observe(update_qmin_limits, 'value')
     uqmax.observe(update_qmin_limits, 'value')
-    
+
     row1_ui = widgets.HBox([bgd_scaler,plaz_type,do_cont_update])
     #row1_ui = widgets.HBox([bgd_scaler])
 
     row2_ui = widgets.HBox([gauss_damp,gw,vis_bg_yadjust])
-    
+
     row3_ui = widgets.HBox([uqmin, uqmax, force_qmax_type])
     row4_ui = widgets.HBox([show_fq,altplot_type,show_qminqmax])
     row5_ui = widgets.HBox([ndeg,qminpla,qmaxpla])
-    
+
     ui = widgets.VBox([row1_ui, row2_ui, row3_ui, row4_ui, row5_ui])
 
 
@@ -627,8 +632,8 @@ def showme_reduction_placzek_corrections(q,_sqfg,_sqbg,v_qmin=0.0,v_qmax=30,v_im
                                           'plaz_type':plaz_type,'altplot_type':altplot_type,'vis_bg_yadjust':vis_bg_yadjust,
                                          'force_qmax_type':force_qmax_type})
 
-    display(ui, out,flex='flex-grow')    
-        
+    display(ui, out,flex='flex-grow')
+
 
 def make_gr_from_sq(q, sq, delr=None, rmax = None, rmin=None,qmin = None, qmax=None, return_qsq = False,correct_for_qmax=False,final_wid = 10):
     if delr == None:
@@ -641,34 +646,36 @@ def make_gr_from_sq(q, sq, delr=None, rmax = None, rmin=None,qmin = None, qmax=N
         qmin = q[0]
     if qmax == None:
         qmax = q[-1]
-        
+
     selected_mask = np.where(np.logical_and(q>=qmin, q<=qmax))
     useq = q[selected_mask]
     usesq = sq[selected_mask]
- 
+
     if correct_for_qmax:
         correct_val = usesq[-final_wid:-1].mean()
         usesq -= correct_val
-        
+
     if return_qsq:
-        return useq, usesq         
-    
-    r = np.arange(rmin,rmax+delr/2,delr)      
-    r, gr = pdf_transform(r[0],r[-1],delr, useq, usesq)   
+        return useq, usesq
+
+    r = np.arange(rmin,rmax+delr/2,delr)
+    r, gr = pdf_transform(r[0],r[-1],delr, useq, usesq)
     return r, gr
 
+
 def debye_scattering(r_list,gr_list,q_list):
-    sq_list = np.zeros(len(q_list))    
+    sq_list = np.zeros(len(q_list))
     for j in range(len(q_list)):
         q = q_list[j]
-        sq_list[j] = np.sum(gr_list*np.sin(q*r_list))            
+        sq_list[j] = np.sum(gr_list*np.sin(q*r_list))
     for i in range(len(q_list)):
         if q_list[i] > 0:
             sq_list[i] = sq_list[i]/q_list[i]
         else:
             sq_list[i] = 0.0
     return sq_list
-        
+
+
 def pdf_transform(xmin,xmax,delx,x,y):
     r = np.arange(xmin,xmax+delx/2.0,delx)
     gr = np.zeros(len(r))
@@ -1192,4 +1199,3 @@ def batch_process_dfsq_pz_corrections(df_sqfg,bgd,rescale_bgd=1.0,plaz_type=None
                 df_back_sq[col] = this_sqback
 
             return df_back_sq    
-    
