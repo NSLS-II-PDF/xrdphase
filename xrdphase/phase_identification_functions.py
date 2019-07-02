@@ -125,7 +125,7 @@ def identify_phase(models, qcut, iqcut):
                 high_lims.append(max(iqcutNoBgd))  # amp
 
         # want to show progress
-        print("Working on model " + str(j+1) + " of " + str(len(models)+1))
+        print("Working on model " + str(j+1) + " of " + str(len(models)))
 
         # cuts out models with way too many peaks
         if len(effective_peak_x) <= 2*len(qcutM[peaks]):
@@ -216,24 +216,26 @@ def show_correct_model(models, fitIndx, modelList, qcut, iqcut):
                 high_lims.append(.06)  # wid
                 high_lims.append(max(iqcutNoBgd))  # amp
 
-        try:
-            fit_data, _ = curve_fit(sum_gauss, qcutM, iqcutNoBgd,
-                                    p0=initial_guess,
-                                    bounds=([low_lims, high_lims]),
-                                    maxfev=100)
-            plt.figure()
-            plt.title(models[modelList[fitIndx]]['material_id'] + "\t" +
-                      models[modelList[fitIndx]]['spacegroup']['symbol'])
-            plt.plot(qcutM, iqcutNoBgd, label="Data")
-            plt.plot(qcutM, sum_gauss(qcutM, *fit_data), label="Fit")
-            plt.scatter(effective_peak_x, effective_peak_y, label="Model",
-                        marker='.', color='r')
-            plt.legend(loc=0)
+    try:
+        fit_data, _ = curve_fit(sum_gauss, qcutM, iqcutNoBgd,
+                                p0=initial_guess,
+                                bounds=([low_lims, high_lims]),
+                                maxfev=100)
+        plt.figure()
+        plt.title(models[modelList[fitIndx]]['material_id'] + "  " +
+                  models[modelList[fitIndx]]['spacegroup']['symbol'])
+        plt.plot(qcutM, iqcutNoBgd, label="Data")
+        plt.plot(qcutM, sum_gauss(qcutM, *fit_data), label="Fit")
+        plt.scatter(effective_peak_x, effective_peak_y, label="Model",
+                    marker='.', color='r')
+        plt.legend(loc=0)
 
-            residual += abs(iqcutNoBgd-sum_gauss(qcutM, *fit_data))
-            sumRes = (sum(residual)/len(effective_peak_x))+zero_count*1000
-            print("Sum of residual: " + str(sumRes))
+        residual += abs(iqcutNoBgd-sum_gauss(qcutM, *fit_data))
+        sumRes = (sum(residual)/len(effective_peak_x))+zero_count*1000
+        print("Sum of residual: " + str(sumRes))
 
-        except RuntimeError:
-            residual = 100000+zero_count*1000
-            print("There weren't any fits")
+        plt.show()
+
+    except RuntimeError:
+        residual = 100000+zero_count*1000
+        print("There weren't any fits")
