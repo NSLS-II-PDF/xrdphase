@@ -124,6 +124,9 @@ def identify_phase(models, qcut, iqcut):
                 high_lims.append(.06)  # wid
                 high_lims.append(max(iqcutNoBgd))  # amp
 
+        # want to show progress
+        print("Working on model " + str(j+1) + " of " + str(len(models)+1))
+
         # cuts out models with way too many peaks
         if len(effective_peak_x) <= 2*len(qcutM[peaks]):
             try:
@@ -134,7 +137,7 @@ def identify_phase(models, qcut, iqcut):
                 print("A curve was fit for " + models[j]['material_id'])
 
                 residual += abs(iqcutNoBgd-sum_gauss(qcutM, *fit_data))
-                sumRes = sum(residual)+zero_count*1000
+                sumRes = (sum(residual)/len(effective_peak_x))+zero_count*1000
                 resSumList.append(sumRes)
                 modelList.append(j)
 
@@ -228,7 +231,7 @@ def show_correct_model(models, fitIndx, modelList, qcut, iqcut):
             plt.legend(loc=0)
 
             residual += abs(iqcutNoBgd-sum_gauss(qcutM, *fit_data))
-            sumRes = sum(residual)+zero_count*1000
+            sumRes = (sum(residual)/len(effective_peak_x))+zero_count*1000
             print("Sum of residual: " + str(sumRes))
 
         except RuntimeError:
