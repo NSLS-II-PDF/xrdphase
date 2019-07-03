@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from pymatgen import MPRester
-from free_pdf import find_nearest, cut_data, read_index_data_smart
+from .free_pdf import find_nearest, cut_data, read_index_data_smart
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 
