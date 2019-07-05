@@ -1,3 +1,9 @@
+"""This module contains functions used in phase_id_script to find the most
+similar crystal phase of a material using X-ray diffraction at a beamline.
+
+
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 from pymatgen import MPRester
@@ -8,6 +14,22 @@ from scipy.optimize import curve_fit
 
 def get_structures(apiKey, elements):
     """Gets structures from Materials Project database.
+
+    Uses a Materials Project API key to query the database with a list of
+    elements. Gets Cu K-alpha diffraction pattern, material id, and spacegroup
+    info for each model.
+
+    Parameters
+    ----------
+    `apiKey` : str
+               This is your API key from the MaterialsProject
+    `elements` : list of str
+                 Include a list of elements in the sample here.
+
+
+
+
+
     Pass in api key, a list of elements in the sample,
     and the number of different elements in the sample"""
     mpr = MPRester(apiKey)
