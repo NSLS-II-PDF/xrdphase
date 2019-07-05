@@ -1,12 +1,12 @@
 
-#from ._version import get_versions
-#t`__version__ = get_versions()['version']
-#del get_versions
-# going to test using python fire
+# from ._version import get_versions
+# t`__version__ = get_versions()['version']
+# del get_versions
 from .phase_identification_functions import get_structures, read_data
 from .phase_identification_functions import identify_phase, show_correct_model
-#from . import phase_identification_functions
+# from . import phase_identification_functions
 import fire
+
 
 class PhaseIdentification:
     def find_phase(self, apiKey, elementList, fileName, cutDataStart):
@@ -15,14 +15,9 @@ class PhaseIdentification:
         fitIndx, modelList = identify_phase(models, qcut, iqcut)
         show_correct_model(models, fitIndx, modelList, qcut, iqcut)
 
-
-        # self._find_phase_no_api(models, fileName, cutDataStart)
-
-
     def _split_read_data(self, fileName, cutDataStart):
         qcut, iqcut = read_data(fileName, cutDataStart)
         return qcut, iqcut
-
 
     def _split_identify_phase(self, models, qcut, iqcut):
         fitIndx, modelList = identify_phase(models, qcut, iqcut)
@@ -32,6 +27,7 @@ class PhaseIdentification:
 
 def main():
     fire.Fire(PhaseIdentification)
+
 
 if __name__ == '__main__':
     main()
