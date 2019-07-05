@@ -27,7 +27,7 @@ class PhaseIdentification:
         return qcut, iqcut
 
     def _split_identify_phase(self, models, qcut, iqcut):
-        fitIndx, = identify_phase(self.models, self.qcut, self.iqcut)
+        fitIndx = identify_phase(self.models, self.qcut, self.iqcut)
         model_name = models[fitIndx]['material_id']
         return fitIndx, model_name
 
