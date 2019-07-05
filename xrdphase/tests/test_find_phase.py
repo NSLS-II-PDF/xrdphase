@@ -22,6 +22,5 @@ def test_identify_phase():
         models = json.load(json_file)
     qcut, iqcut = piClass._split_read_data(fileName='./tests/test_data/Ni.chi',
                                            cutDataStart=2)
-    fitIndx, modelList, model_name = piClass._split_identify_phase(models,
-                                                                   qcut, iqcut)
+    fitIndx, model_name = piClass._split_identify_phase(models, qcut, iqcut)
     assert model_name == 'mp-23', "Wrong model was picked"
