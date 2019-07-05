@@ -149,15 +149,56 @@ def identify_phase(models, qcut, iqcut):
                   models[j]['material_id'] +
                   ". There might be too many peaks")
 
-    # find index of smallest residual
-    fitIndx = resSumList.index(min(resSumList))
-    print("I think you're looking at " +
-          models[modelList[fitIndx]]['spacegroup']['symbol'] +
-          ', ' + models[modelList[fitIndx]]['material_id'])
-    return fitIndx, modelList
+    # zip resSumList and modelList together to rank residuals
+    mappedRes = list(zip(resSumList, modelList))
+
+    # sort mapped residual values
+    mappedRes.sort()
+
+    # print top choices
+    if len(modelList) == 0:
+        print("\nSorry, no matches were found at all")
+        fitIndx = None
+        print()
+        return fitIndx
+
+    elif len(modelList) == 1:
+        fitIndx = mappedRes[0][1]
+        print("\nI think you're looking at " +
+              models[fitIndx]['spacegroup']['symbol'] + ", " +
+              models[fitIndx]['material_id'])
+        print()
+        return fitIndx
+
+    elif len(modelList) == 2:
+        fitIndx = mappedRes[0][1]
+        print("\nI think you're looking at " +
+              models[fitIndx]['spacegroup']['symbol'] + ", " +
+              models[fitIndx]['material_id'])
+        # print runner up
+        print("Model " + models[mappedRes[1][1]]['material_id'] + ", " +
+              models[mappedRes[1][1]]['spacegroup']['symbol'] +
+              " has the second smallest residual.")
+        print()
+        return fitIndx
+
+    else:
+        fitIndx = mappedRes[0][1]
+        print("\nI think you're looking at " +
+              models[fitIndx]['spacegroup']['symbol'] + ", " +
+              models[fitIndx]['material_id'])
+        # print runner ups
+        print("Model " + models[mappedRes[1][1]]['material_id'] + ", " +
+              models[mappedRes[1][1]]['spacegroup']['symbol'] +
+              " has the second smallest residual.")
+        print("Model " + models[mappedRes[2][1]]['material_id'] + ", " +
+              models[mappedRes[2][1]]['spacegroup']['symbol'] +
+              " has the third smallest residual.")
+        print()
+        return fitIndx
 
 
-def show_correct_model(models, fitIndx, modelList, qcut, iqcut):
+def show_correct_model(models, fitIndx, qcut, iqcut):
     """Graphs the correct model based on which one fit the best. Pass in
        the list of models, fitIndx, the list of models that have graphs,
        qcut, and iqcut"""
@@ -166,7 +207,7 @@ def show_correct_model(models, fitIndx, modelList, qcut, iqcut):
     effective_peak_x = []
     effective_peak_y = []
 
-    model_num = models[modelList[fitIndx]]['xrd.Cu']['pattern']
+    model_num = models[fitIndx]['xrd.Cu']['pattern']
 
     for i in range(len(model_num)):
         x_val_mod.append(convert_tth_to_q(model_num[i][2])*.995)
@@ -222,8 +263,8 @@ def show_correct_model(models, fitIndx, modelList, qcut, iqcut):
                                 bounds=([low_lims, high_lims]),
                                 maxfev=100)
         plt.figure()
-        plt.title(models[modelList[fitIndx]]['material_id'] + "  " +
-                  models[modelList[fitIndx]]['spacegroup']['symbol'])
+        plt.title(models[fitIndx]['material_id'] + "  " +
+                  models[fitIndx]['spacegroup']['symbol'])
         plt.plot(qcutM, iqcutNoBgd, label="Data")
         plt.plot(qcutM, sum_gauss(qcutM, *fit_data), label="Fit")
         plt.scatter(effective_peak_x, effective_peak_y, label="Model",
@@ -232,7 +273,8 @@ def show_correct_model(models, fitIndx, modelList, qcut, iqcut):
 
         residual += abs(iqcutNoBgd-sum_gauss(qcutM, *fit_data))
         sumRes = (sum(residual)/len(effective_peak_x))+zero_count*1000
-        print("Sum of residual: " + str(sumRes))
+        print("Sum of residual for " + models[fitIndx]['material_id'] + ": "
+              + str(sumRes))
 
         plt.show()
 
