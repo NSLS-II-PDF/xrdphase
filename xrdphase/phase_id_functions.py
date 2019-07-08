@@ -1,7 +1,6 @@
 """This module contains functions used in phase_id_script to find the most
 similar crystal phase of a material using X-ray diffraction at a beamline.
 
-
 """
 
 import numpy as np
@@ -22,16 +21,18 @@ def get_structures(apiKey, elements):
     Parameters
     ----------
     `apiKey` : str
-               This is your API key from the MaterialsProject
+               This is your API key from the MaterialsProject.
     `elements` : list of str
                  Include a list of elements in the sample here.
 
+    Returns
+    -------
+    `models` : list of dicts
+               Contains X-ray diffraction patterns, material ids, and space
+               group information about the elements queried.
 
+    """
 
-
-
-    Pass in api key, a list of elements in the sample,
-    and the number of different elements in the sample"""
     mpr = MPRester(apiKey)
     numElements = len(elements)
     models = mpr.query(criteria={"elements": {"$all": [*elements]},
@@ -41,25 +42,82 @@ def get_structures(apiKey, elements):
 
 
 def read_data(fileName, startCut):
-    """Reads in the data from the sample chi file and makes an
-    initial cut at the beginning of the data
-    Used to cut out air scatter and the beam stop from the start of the
-    data"""
+    """Reads sample data file and cuts data.
+
+    Reads the data file and makes an initial cut at the start of the data
+    based on the q value that the user specifies. The end of the data is cut at
+    Q=20.
+
+    Parameters
+    ----------
+    `fileName` : str
+                 This is the name of the sample data file. This file needs to
+                 contain Q values.
+    `startCut` : int
+                 This is the value which the data will start at after being
+                 cut. Pick a value that cuts out air scatter and the beam stop.
+
+    Returns
+    -------
+    `qcut` : ndarray
+             This is an array of Q values after the sample data has been cut.
+             The range of Q values is from startCut to 20.
+    `iqcut` : ndarray
+              This is an array of I of Q values after the sample data has been
+              cut.
+
+    """
+
     q, iq = read_index_data_smart(fileName)
     qcut, iqcut = cut_data(q, iq, startCut, 20)
     return qcut, iqcut
 
 
 def bgd_func(qcut, iqcutStart, iqcutEnd):
-    "Background function - Linear"
-    "Pass in qcut values and the start and end points of iqcut"
+    """Linear background function
+
+    Equation of a line used to eliminate the background of the sample data.
+
+    Parameters
+    ----------
+    `qcut` : ndrray
+             Q values of the sample data after it's been cut. First and last
+             values are used to determine slope.
+    `iqcutStart` : float
+                   The first I(Q) value of the data after it has been cut again
+                   based on the model from the Materials Project.
+    `iqcutEnd` : float
+                 The last I(Q) value of the data after it has been cut again
+                 based on the model from the Materials Project.
+
+    Notes
+    -----
+    This function may be modified to use a different background function.
+    A higher order polynomial may provide a better fit than a line.
+
+    """
+
     a1 = (iqcutEnd-iqcutStart)/(qcut[-1]-qcut[0])
     a0 = iqcutStart-(qcut[0]*(a1))
     return a0 + a1*qcut
 
 
 def sum_gauss(x, *params):
-    "Gaussian function to fit the data peaks"
+    """Sum of gaussians.
+
+    Used to fit a curve to the sample data based on an initial guess and bounds
+    from the models. Needed to find residuals for each model to determine the
+    closest fit model.
+
+    Parameters
+    ----------
+    `x` : array_like
+          X values to be used in the funciton.
+    `*params` : list of float
+                list containing centers, widths, and amplitudes for each peak
+
+    """
+
     y = np.zeros_like(x)
     for i in range(0, len(params), 3):
         cen = params[i]
@@ -70,20 +128,68 @@ def sum_gauss(x, *params):
 
 
 def convert_tth_to_q(tth, lam=1.5406):
+    """Converts 2theta values to Q values
+
+    Needed so that sample data and models use the same units. 2theta is energy
+    dependent, so we need to convert the 2theta values to q, where energy is
+    not required.
+
+    Parameters
+    ----------
+    `tth` : float
+            2theta values of the models from the Materials Project
+    `lam` : float
+            Wavelength in angstroms, default value is Cu K-alpha value
+
+    """
+
     "Converts 2theta values in Materials Project models to q"
     q = (np.pi*4.0/lam)*np.sin(tth/360*np.pi)
     return q
 
 
 def identify_phase(models, qcut, iqcut):
-    """Identifies the most likely spacegroup symbol and material_id based
-    on the sample data and Materials Project models.
-    Pass in the list of models, qcut, and iqcut.
-    This function attempts to fit a curve to the data based on the position
-    and amplitudes of the models.
-    It ignores models that look like they have too many peaks and it
-    looks for the model with the
-    smallest residual between the data and the fitted curve"""
+    """Identifies the most likely material id and space group symbol from the
+    Materials Project.
+
+    Tries to fit a curve to the sample data based on where the peaks are in the
+    models from the database. There's a penalty for the sample data having a
+    peak where the models don't, and another for the models having peaks where
+    the data doesn't. Then the the model is picked where the residual is the
+    lowest.
+
+    Parameters
+    ----------
+    `models` : list of dicts
+               The list containing the X-ray diffraction patterns, material
+               ids, and space group symbols from the query to the Materials
+               Project.
+    `qcut` : ndarray
+             Q values from the cut sample data
+    `iqcut` : ndarray
+              I(Q) values from the cut sample data
+
+    Returns
+    -------
+    `fitIndx` : int
+                Index of the model picked as the correct model in the list of
+                models from the query to the database
+
+    Notes
+    -----
+    This function first gets the 2theta and amplitude values for each model
+    from the database and converts the 2theta values to Q. Then it cuts the
+    sample data again based on where each model ends, and it subtracts the
+    background out of the data (using the first and last values of the newly
+    cut data). It finds the number of peaks in the data to eliminate models
+    later on, and then it creates and stores initial guesses and bounds for
+    curve fitting. It cuts out models with too many peaks, then tries to fit a
+    curve to the data and stores the residuals. It goes through the list of
+    residuals and prints the most likely and then second and third most likely,
+    if they exist, models with their material ids and space group symbols.
+
+    """
+
     resSumList = []  # will hold the residuals for each model
     modelList = []  # holds index of models that will have graphs
     for j in range(len(models)):
@@ -221,9 +327,27 @@ def identify_phase(models, qcut, iqcut):
 
 
 def show_correct_model(models, fitIndx, qcut, iqcut):
-    """Graphs the correct model based on which one fit the best. Pass in
-       the list of models, fitIndx, the list of models that have graphs,
-       qcut, and iqcut"""
+    """Graphs the correct model
+
+    Uses the index returned from the identify_phase function and graphs the
+    corresponding model with the data.
+
+    Parameters
+    ----------
+    `models` : list of dicts
+               The list containing the X-ray diffraction patterns, material
+               ids, and space group symbols from the query to the Materials
+               Project.
+    `fitIndx` : int
+                Index of the model in the list of models that was determined to
+                be the correctly fit model
+    `qcut` : ndarray
+             Q values from the cut sample data
+    `iqcut` : ndarray
+              I(Q) values from the cut sample data
+
+    """
+
     x_val_mod = []
     y_val_mod = []
     effective_peak_x = []
