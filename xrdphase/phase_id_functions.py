@@ -9,6 +9,9 @@ from pymatgen import MPRester
 from xrdphase.free_pdf import find_nearest, cut_data, read_index_data_smart
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
+import random
+from sklearn.neural_network import MLPClassifier
+import pickle
 
 
 def get_structures(apiKey, elements):
@@ -44,9 +47,8 @@ def get_structures(apiKey, elements):
 def read_data(fileName, startCut):
     """Reads sample data file and cuts data.
 
-    Reads the data file and makes an initial cut at the start of the data
-    based on the q value that the user specifies. The end of the data is cut at
-    Q=20.
+    Reads the data file and makes an initial cut at the Qmin value the user
+    specifies. Qmax is set to 20.
 
     Parameters
     ----------
@@ -54,8 +56,8 @@ def read_data(fileName, startCut):
                  This is the name of the sample data file. This file needs to
                  contain Q values.
     `startCut` : int
-                 This is the value which the data will start at after being
-                 cut. Pick a value that cuts out air scatter and the beam stop.
+                 Qmin. This is the value which the data will start at after
+                 being cut.
 
     Returns
     -------
@@ -65,12 +67,18 @@ def read_data(fileName, startCut):
     `iqcut` : ndarray
               This is an array of I of Q values after the sample data has been
               cut.
+    `numPeak` : int
+                This is a broad number of peaks used to later limit which
+                models are checked for peaks with the neural network.
 
     """
 
     q, iq = read_index_data_smart(fileName)
     qcut, iqcut = cut_data(q, iq, startCut, 20)
-    return qcut, iqcut
+    iqcutN = iqcut/max(iqcut)
+    peaks, _ = find_peaks(iqcutN, prominence=0.02)
+    numPeaks = len(peaks)
+    return qcut, iqcut, numPeaks
 
 
 def bgd_func(qcut, iqcutStart, iqcutEnd):
@@ -143,9 +151,44 @@ def convert_tth_to_q(tth, lam=1.5406):
 
     """
 
-    "Converts 2theta values in Materials Project models to q"
     q = (np.pi*4.0/lam)*np.sin(tth/360*np.pi)
     return q
+
+
+def cut_data_length(qt, sqt, qmin, length):
+    """Cuts the data while maintaining the length passed in.
+
+    Ensures the data starts at qmin and ends when the length has been achieved.
+
+    Parameters
+    ----------
+    `qt` : array_like
+           Q values to be cut
+    `sqt` : array_like
+            I(Q) values to be cut
+    `qmin` : float
+             Minimum q value after data is cut
+    `length` : int
+               Number of elements required after the data has been cut
+
+    Returns
+    -------
+    `qcut` : ndarray
+             The array of Q values after the sample data has been cut.
+    `sqcut` : ndarray
+              The array of I of Q values after the sample data has been cut.
+
+    """
+
+    qcut = []
+    sqcut = []
+    for i in range(len(qt)):
+        if qt[i] >= qmin and len(qcut) < length:
+            qcut.append(qt[i])
+            sqcut.append(sqt[i])
+    qcut = np.array(qcut)
+    sqcut = np.array(sqcut)
+    return qcut, sqcut
 
 
 def identify_phase(models, qcut, iqcut):
@@ -326,7 +369,129 @@ def identify_phase(models, qcut, iqcut):
         return fitIndx
 
 
-def show_correct_model(models, fitIndx, qcut, iqcut):
+def get_NN():
+    """This unpickles the MLPClassifier neural network.
+
+    The neural network should already be made, so this calls the NN to use.
+
+    Returns
+    -------
+    `clf` : MLPClassifier
+            This is the trained neural network used to identify if a peak
+            exists in a range or not.
+
+    """
+
+    infile = open('./nnMPLClass', 'rb')
+    clf = pickle.load(infile)
+    infile.close()
+    return clf
+
+
+def identify_phase_nn(models, qcut, iqcut, clf, numPeaks):
+    """Identifies the most likely material id and space group symbol from the
+    Materials Project using a neural network.
+
+    This goes through each model and cuts out sections from the sample data at
+    the positions that each model has a peak. It then predicts if a peak exists
+    in that section by using a neural network trained on peaks that exist and
+    peaks that don't exist (lines with 0 slope, curves on the edges). It picks
+    out the model with the most peak matches as the most likely model.
+
+    Parameters
+    ----------
+    `models` : list of dicts
+               The list containing the X-ray diffraction patterns, material
+               ids, and space group symbols from the query to the Materials
+               Project.
+    `qcut` : ndarray
+             Q values from the cut sample data
+    `iqcut` : ndarray
+              I(Q) values from the cut sample data
+    `clf` : MLPClassifier
+            This is the trained classifier neural network that identifies if a
+            peak exists within a range
+    `numPeaks` : int
+                 This is the broad number of peaks used to cut out models with
+                 very high numbers of peaks from being tested with the NN
+
+    Returns
+    -------
+    `bestMatch` : int
+                  Index of the model picked as the closest match in the list of
+                  models from the query to the database
+
+    Notes
+    -----
+    This function does not return a top three ranking like the other identify
+    phase function, but it seems to perform faster.
+
+    """
+
+    pred = []  # holds prediction to do some more analysis later
+    predModelNum = []
+    for j in range(len(models)):
+        model_num = models[j]['xrd.Cu']['pattern']
+        x_val_mod = []
+        y_val_mod = []
+        effective_peak_x = []
+        effective_peak_y = []
+        yTest = []
+
+        # read in model peak positions, convert to q
+        for i in range(len(model_num)):
+            x_val_mod.append(convert_tth_to_q(model_num[i][2])*.995)
+            y_val_mod.append(model_num[i][0])
+
+            if x_val_mod[i] >= qcut[0]:
+                effective_peak_x.append(x_val_mod[i])
+                effective_peak_y.append(y_val_mod[i])
+
+        # cut data for each peak
+        if len(x_val_mod) <= 2*numPeaks:
+
+            for i in range(len(effective_peak_x)):
+                qcutM, iqcutM = cut_data_length(qcut, iqcut,
+                effective_peak_x[i]-.2, effective_peak_x[i]+.2, 18)
+                bgd = bgd_func(qcutM, iqcutM[0], iqcutM[-1])
+
+                iqcutNoBgd = np.zeros_like(iqcutM)
+                iqcutNoBgd = iqcutM-bgd
+                for i in range(len(iqcutNoBgd)):
+                    if iqcutNoBgd[i] < 0:
+                        iqcutNoBgd[i] = 0
+
+                if max(iqcutNoBgd) == 0:
+                    iqcutNoBgd = np.zeros_like(iqcutNoBgd)
+
+                else:
+                    iqcutNoBgd = iqcutNoBgd/max(iqcutNoBgd)
+                yTest.append(iqcutNoBgd)
+
+            pred.append(clf.predict(yTest))
+            predModelNum.append(j)
+
+    # find the best match percentage and return that model index
+    fitBool = []
+    matchPercentList = []
+    for i in range(len(pred)):
+        totalMatches = len(pred[i])
+        goodMatches = sum(pred[i])
+        badMatches = len(pred[i])-sum(pred[i])
+        matchPercent = goodMatches/totalMatches*100
+        matchPercentList.append(matchPercent)
+        if badMatches >= goodMatches:
+            fitBool.append(0)
+        else:
+            fitBool.append(1)
+
+    resSumList = []
+    bestMatch = predModelNum[matchPercentList.index(max(matchPercentList))]
+    return bestMatch
+
+
+def show_correct_model(models, fitIndx, qcut, iqcut, const_shift=0.0,
+                       q_dep_shift=1.0):
     """Graphs the correct model
 
     Uses the index returned from the identify_phase function and graphs the
@@ -345,6 +510,19 @@ def show_correct_model(models, fitIndx, qcut, iqcut):
              Q values from the cut sample data
     `iqcut` : ndarray
               I(Q) values from the cut sample data
+    `const_shift` : float, optional
+                    This adds the shift amount to every model q value.
+                    Default=0.0
+    `q_dep_shift` : float, optional
+                    This multiplies the shift amount to every q value.
+                    Default=1.01
+
+    Notes
+    -----
+    Since a number of MP model peak positions are calculated, some models
+    exhibit a slight shift at higher q values. The two shift parameters can be
+    used to show what a correction would look like. A 1.01 q_dep_shift appears
+    to be a good q dependent shift value to correct the peak positions.
 
     """
 
@@ -356,7 +534,8 @@ def show_correct_model(models, fitIndx, qcut, iqcut):
     model_num = models[fitIndx]['xrd.Cu']['pattern']
 
     for i in range(len(model_num)):
-        x_val_mod.append(convert_tth_to_q(model_num[i][2])*.995)
+        x_val_mod.append(convert_tth_to_q(model_num[i][2])*.995*q_dep_shift+
+                             const_shift)
         y_val_mod.append(model_num[i][0])
         if x_val_mod[i] >= qcut[0]:
             effective_peak_x.append(x_val_mod[i])
@@ -368,18 +547,18 @@ def show_correct_model(models, fitIndx, qcut, iqcut):
 
         iqcutNoBgd = np.zeros_like(iqcutM)
         iqcutNoBgd = iqcutM-bgd
-        for i in range(len(iqcutNoBgd)):
-            if iqcutNoBgd[i] < 0:
-                iqcutNoBgd[i] = 0
+        for j in range(len(iqcutNoBgd)):
+            if iqcutNoBgd[j] < 0:
+                iqcutNoBgd[j] = 0
 
         initial_guess = []
         low_lims = []
         high_lims = []
         zero_count = 0
         residual = 0
-        for i in range(len(effective_peak_x)):
-            if effective_peak_x[i] >= qcut[2]:
-                x = effective_peak_x[i]
+        for j in range(len(effective_peak_x)):
+            if effective_peak_x[j] >= qcut[2]:
+                x = effective_peak_x[j]
                 # used to see if there's a better peak somewhere else
                 peak_max_indx = 2
                 indx = find_nearest(qcut, x)
@@ -413,8 +592,10 @@ def show_correct_model(models, fitIndx, qcut, iqcut):
                   models[fitIndx]['spacegroup']['symbol'])
         plt.plot(qcutM, iqcutNoBgd, label="Data")
         plt.plot(qcutM, sum_gauss(qcutM, *fit_data), label="Fit")
-        plt.scatter(effective_peak_x, effective_peak_y, label="Model",
-                    marker='.', color='r')
+        plt.vlines(effective_peak_x, 0, initial_guess[2::3], label="Model",
+                   colors='r')
+        plt.xlabel("q")
+        plt.ylabel("Intensity")
         plt.legend(loc=0)
 
         residual += abs(iqcutNoBgd-sum_gauss(qcutM, *fit_data))

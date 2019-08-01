@@ -4,8 +4,10 @@ command line use.
 
 """
 
-from phase_id_functions import get_structures, read_data
-from phase_id_functions import identify_phase, show_correct_model
+from xrdphase.phase_id_functions import get_structures, read_data
+from xrdphase.phase_id_functions import identify_phase, show_correct_model
+from xrdphase.phase_id_functions import get_NN, identify_phase_nn
+from xrdphase.training_NN_funcs import trainNN, pickle_nn
 import fire
 
 
@@ -36,6 +38,9 @@ class PhaseIdentification:
     -------
     find_phase(apiKey, elementList, fileName, cutDataStart)
         Finds the correct phase/space group symbol of the sample data
+    find_phase_nn(apiKey, elementList, fileName, cutDataStart)
+        Finds the correct phase/space group symbol of the sample data using a
+        neural network. Performs faster than `find_phase`.
 
     """
 
@@ -52,9 +57,21 @@ class PhaseIdentification:
 
     def find_phase(self, apiKey, elementList, fileName, cutDataStart):
         models = get_structures(apiKey, elementList)
-        qcut, iqcut = read_data(fileName, cutDataStart)
+        qcut, iqcut, _ = read_data(fileName, cutDataStart)
         fitIndx = identify_phase(models, qcut, iqcut)
         show_correct_model(models, fitIndx, qcut, iqcut)
+
+    def find_phase_nn(self, apiKey, elementList, fileName, cutDataStart):
+        models = get_structures(apiKey, elementList)
+        qcut, iqcut, numPeaks = read_data(fileName, cutDataStart)
+        clf = get_NN()
+        bestMatch = identify_phase_nn(models, qcut, iqcut, clf, numPeaks)
+        show_correct_model(models, bestMatch, qcut, iqcut)
+
+    def _create_NN(self):
+        # This should only be run if the training set needs to be modified
+        clf = trainNN()
+        pickle_nn(clf)
 
     def _split_read_data(self, fileName, cutDataStart):
         qcut, iqcut = read_data(self.fileName, self.cutDataStart)
