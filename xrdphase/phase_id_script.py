@@ -45,7 +45,7 @@ class PhaseIdentification:
     """
 
     def __init__(self, apiKey=None, elementList=None, fileName=None,
-                 cutDataStart=None):
+                 cutDataStart=None, q_dep_shift=None, const_shift=None):
         if apiKey is not None:
             self.apiKey = apiKey
         if elementList is not None:
@@ -54,25 +54,35 @@ class PhaseIdentification:
             self.fileName = fileName
         if cutDataStart is not None:
             self.cutDataStart = cutDataStart
+        if q_dep_shift is not None:
+            self.q_dep_shift = q_dep_shift
+        if const_shift is not None:
+            self.const_shift = const_shift
 
-    def find_phase(self, apiKey, elementList, fileName, cutDataStart):
+    def find_phase(self, apiKey, elementList, fileName, cutDataStart,
+                   q_dep_shift=1.0, const_shift=0.0):
         models = get_structures(apiKey, elementList)
         qcut, iqcut, _ = read_data(fileName, cutDataStart)
-        fitIndx = identify_phase(models, qcut, iqcut)
+        fitIndx = identify_phase(models, qcut, iqcut, q_dep_shift,
+                                 const_shift)
         if fitIndx == None:
             pass
         else:
-            show_correct_model(models, fitIndx, qcut, iqcut)
+            show_correct_model(models, fitIndx, qcut, iqcut, const_shift,
+                               q_dep_shift)
 
-    def find_phase_nn(self, apiKey, elementList, fileName, cutDataStart):
+    def find_phase_nn(self, apiKey, elementList, fileName, cutDataStart,
+                      q_dep_shift=1.0, const_shift=0.0):
         models = get_structures(apiKey, elementList)
         qcut, iqcut, numPeaks = read_data(fileName, cutDataStart)
         clf = get_NN()
-        bestMatch = identify_phase_nn(models, qcut, iqcut, clf, numPeaks)
+        bestMatch = identify_phase_nn(models, qcut, iqcut, clf, numPeaks,
+                                      q_dep_shift, const_shift)
         if bestMatch == None:
             pass
         else:
-            show_correct_model(models, bestMatch, qcut, iqcut)
+            show_correct_model(models, bestMatch, qcut, iqcut, const_shift,
+                               q_dep_shift)
 
     def _create_NN(self):
         # This should only be run if the training set needs to be modified

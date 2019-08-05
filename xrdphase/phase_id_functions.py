@@ -191,15 +191,15 @@ def cut_data_length(qt, sqt, qmin, length):
     return qcut, sqcut
 
 
-def identify_phase(models, qcut, iqcut):
+def identify_phase(models, qcut, iqcut, q_dep_shift=1.0, const_shift=0.0):
     """Identifies the most likely material id and space group symbol from the
     Materials Project.
 
-    Tries to fit a curve to the sample data based on where the peaks are in the
-    models from the database. There's a penalty for the sample data having a
-    peak where the models don't, and another for the models having peaks where
-    the data doesn't. Then the the model is picked where the residual is the
-    lowest.
+    Applies a Q-dependent or constant shift and tries to fit a curve to the
+    sample data based on where the peaks are in the models from the database.
+    There's a penalty for the sample data having a peak where the models don't,
+    and another for the models having peaks where the data doesn't.
+    Then the the model is picked where the residual is the lowest.
 
     Parameters
     ----------
@@ -211,6 +211,13 @@ def identify_phase(models, qcut, iqcut):
              Q values from the cut sample data
     `iqcut` : ndarray
               I(Q) values from the cut sample data
+    `const_shift` : float, optional
+                    This adds the shift amount to every model q value.
+                    Default=0.0
+    `q_dep_shift` : float, optional
+                    This multiplies the shift amount to every q value.
+                    Default=1.01
+
 
     Returns
     -------
@@ -243,7 +250,8 @@ def identify_phase(models, qcut, iqcut):
         effective_peak_y = []
 
         for i in range(len(model_num)):
-            x_val_mod.append(convert_tth_to_q(model_num[i][2])*.995)
+            x_val_mod.append(convert_tth_to_q(model_num[i][2])*.995*q_dep_shift
+                             +const_shift)
             y_val_mod.append(model_num[i][0])
             # choosing the peaks to use based on where the data starts
             if x_val_mod[i] >= qcut[0]:
@@ -388,15 +396,17 @@ def get_NN():
     return clf
 
 
-def identify_phase_nn(models, qcut, iqcut, clf, numPeaks):
+def identify_phase_nn(models, qcut, iqcut, clf, numPeaks, q_dep_shift=1.0,
+                      const_shift=0.0):
     """Identifies the most likely material id and space group symbol from the
     Materials Project using a neural network.
 
     This goes through each model and cuts out sections from the sample data at
-    the positions that each model has a peak. It then predicts if a peak exists
-    in that section by using a neural network trained on peaks that exist and
-    peaks that don't exist (lines with 0 slope, curves on the edges). It picks
-    out the model with the most peak matches as the most likely model.
+    the positions that each model has a peak. A constant or Q-dependent shift
+    can be applied to fix calculated MP peak positions. It then predicts if a
+    peak existsin that section by using a neural network trained on peaks that
+    exist andpeaks that don't exist (lines with 0 slope, curves on the edges).
+    It picks out the model with the most peak matches as the most likely model.
 
     Parameters
     ----------
@@ -414,7 +424,12 @@ def identify_phase_nn(models, qcut, iqcut, clf, numPeaks):
     `numPeaks` : int
                  This is the broad number of peaks used to cut out models with
                  very high numbers of peaks from being tested with the NN
-
+    `const_shift` : float, optional
+                    This adds the shift amount to every model q value.
+                    Default=0.0
+    `q_dep_shift` : float, optional
+                    This multiplies the shift amount to every q value.
+                    Default=1.01
     Returns
     -------
     `bestMatch` : int
