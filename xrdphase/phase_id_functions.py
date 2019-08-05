@@ -382,7 +382,7 @@ def get_NN():
 
     """
 
-    infile = open('./nnMPLClass', 'rb')
+    infile = open('nnMLPClass', 'rb')
     clf = pickle.load(infile)
     infile.close()
     return clf
@@ -452,7 +452,7 @@ def identify_phase_nn(models, qcut, iqcut, clf, numPeaks):
 
             for i in range(len(effective_peak_x)):
                 qcutM, iqcutM = cut_data_length(qcut, iqcut,
-                effective_peak_x[i]-.2, effective_peak_x[i]+.2, 18)
+                effective_peak_x[i]-.2, 18)
                 bgd = bgd_func(qcutM, iqcutM[0], iqcutM[-1])
 
                 iqcutNoBgd = np.zeros_like(iqcutM)

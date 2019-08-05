@@ -59,14 +59,20 @@ class PhaseIdentification:
         models = get_structures(apiKey, elementList)
         qcut, iqcut, _ = read_data(fileName, cutDataStart)
         fitIndx = identify_phase(models, qcut, iqcut)
-        show_correct_model(models, fitIndx, qcut, iqcut)
+        if fitIndx == None:
+            pass
+        else:
+            show_correct_model(models, fitIndx, qcut, iqcut)
 
     def find_phase_nn(self, apiKey, elementList, fileName, cutDataStart):
         models = get_structures(apiKey, elementList)
         qcut, iqcut, numPeaks = read_data(fileName, cutDataStart)
         clf = get_NN()
         bestMatch = identify_phase_nn(models, qcut, iqcut, clf, numPeaks)
-        show_correct_model(models, bestMatch, qcut, iqcut)
+        if bestMatch == None:
+            pass
+        else:
+            show_correct_model(models, bestMatch, qcut, iqcut)
 
     def _create_NN(self):
         # This should only be run if the training set needs to be modified

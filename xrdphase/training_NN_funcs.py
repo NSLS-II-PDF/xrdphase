@@ -47,7 +47,7 @@ def trainNN():
     return clf
 
 def pickle_nn(clf):
-    filename = './nnMLPClass'
+    filename = 'nnMLPClass'
     outfile = open(filename, 'wb')
     pickle.dump(clf, outfile)
     outfile.close()
