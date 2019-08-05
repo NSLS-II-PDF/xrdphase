@@ -487,6 +487,9 @@ def identify_phase_nn(models, qcut, iqcut, clf, numPeaks):
 
     resSumList = []
     bestMatch = predModelNum[matchPercentList.index(max(matchPercentList))]
+    print("I think you're looking at " +
+          models[bestMatch]['spacegroup']['symbol'] + ", " +
+          models[bestMatch]['material_id'])
     return bestMatch
 
 
