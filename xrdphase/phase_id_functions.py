@@ -139,7 +139,7 @@ def convert_tth_to_q(tth, lam=1.5406):
     """Converts 2theta values to Q values
 
     Needed so that sample data and models use the same units. 2theta is energy
-    dependent, so we need to convert the 2theta values to q, where energy is
+    dependent, so we need to convert the 2theta values to Q, where energy is
     not required.
 
     Parameters
@@ -167,7 +167,7 @@ def cut_data_length(qt, sqt, qmin, length):
     `sqt` : array_like
             I(Q) values to be cut
     `qmin` : float
-             Minimum q value after data is cut
+             Minimum Q value after data is cut
     `length` : int
                Number of elements required after the data has been cut
 
@@ -212,11 +212,11 @@ def identify_phase(models, qcut, iqcut, q_dep_shift=1.0, const_shift=0.0):
     `iqcut` : ndarray
               I(Q) values from the cut sample data
     `const_shift` : float, optional
-                    This adds the shift amount to every model q value.
+                    This adds the shift amount to every model Q value.
                     Default=0.0
     `q_dep_shift` : float, optional
-                    This multiplies the shift amount to every q value.
-                    Default=1.01
+                    This multiplies the shift amount to every Q value.
+                    Default=1.0
 
 
     Returns
@@ -425,10 +425,10 @@ def identify_phase_nn(models, qcut, iqcut, clf, numPeaks, q_dep_shift=1.0,
                  This is the broad number of peaks used to cut out models with
                  very high numbers of peaks from being tested with the NN
     `const_shift` : float, optional
-                    This adds the shift amount to every model q value.
+                    This adds the shift amount to every model Q value.
                     Default=0.0
     `q_dep_shift` : float, optional
-                    This multiplies the shift amount to every q value.
+                    This multiplies the shift amount to every Q value.
                     Default=1.01
     Returns
     -------
@@ -453,7 +453,7 @@ def identify_phase_nn(models, qcut, iqcut, clf, numPeaks, q_dep_shift=1.0,
         effective_peak_y = []
         yTest = []
 
-        # read in model peak positions, convert to q
+        # read in model peak positions, convert to Q
         for i in range(len(model_num)):
             x_val_mod.append(convert_tth_to_q(model_num[i][2])*.995)
             y_val_mod.append(model_num[i][0])
@@ -529,18 +529,18 @@ def show_correct_model(models, fitIndx, qcut, iqcut, const_shift=0.0,
     `iqcut` : ndarray
               I(Q) values from the cut sample data
     `const_shift` : float, optional
-                    This adds the shift amount to every model q value.
+                    This adds the shift amount to every model Q value.
                     Default=0.0
     `q_dep_shift` : float, optional
-                    This multiplies the shift amount to every q value.
+                    This multiplies the shift amount to every Q value.
                     Default=1.01
 
     Notes
     -----
     Since a number of MP model peak positions are calculated, some models
-    exhibit a slight shift at higher q values. The two shift parameters can be
+    exhibit a slight shift at higher Q values. The two shift parameters can be
     used to show what a correction would look like. A 1.01 q_dep_shift appears
-    to be a good q dependent shift value to correct the peak positions.
+    to be a good Q dependent shift value to correct the peak positions.
 
     """
 
@@ -612,7 +612,7 @@ def show_correct_model(models, fitIndx, qcut, iqcut, const_shift=0.0,
         plt.plot(qcutM, sum_gauss(qcutM, *fit_data), label="Fit")
         plt.vlines(effective_peak_x, 0, initial_guess[2::3], label="Model",
                    colors='r')
-        plt.xlabel("q")
+        plt.xlabel("Q")
         plt.ylabel("Intensity")
         plt.legend(loc=0)
 

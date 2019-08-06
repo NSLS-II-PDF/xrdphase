@@ -33,6 +33,12 @@ class PhaseIdentification:
     `cutDataStart` : float
                      This determines where the beginning of the sample data
                      will be after being cut
+    `q_dep_shift` : float, optional
+                    This multiplies the shift amount to every Q value.
+                    Default=1.0
+    `const_shift` : float, optional
+                    This adds the shift amount to every model Q value
+                    Default=0.0
 
     Methods
     -------
