@@ -455,7 +455,8 @@ def identify_phase_nn(models, qcut, iqcut, clf, numPeaks, q_dep_shift=1.0,
 
         # read in model peak positions, convert to Q
         for i in range(len(model_num)):
-            x_val_mod.append(convert_tth_to_q(model_num[i][2])*.995)
+            x_val_mod.append(convert_tth_to_q(model_num[i][2])*.995*q_dep_shift
+                             +const_shift)
             y_val_mod.append(model_num[i][0])
 
             if x_val_mod[i] >= qcut[0]:
