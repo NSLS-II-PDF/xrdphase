@@ -1,6 +1,6 @@
-"""This class combines the functions in phase_id_functions into a class with
-a function that determines the phase of the sample data. It also allows for
-command line use.
+"""This is ACE - The Automated Crystallography Expert. This class combines the
+functions in phase_id_functions into a class with a function that determines
+the phase of the sample data. It also allows for command line use.
 
 """
 
