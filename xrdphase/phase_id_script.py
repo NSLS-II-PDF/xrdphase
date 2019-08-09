@@ -71,7 +71,7 @@ class PhaseIdentification:
         qcut, iqcut, _ = read_data(fileName, cutDataStart)
         fitIndx = identify_phase(models, qcut, iqcut, q_dep_shift,
                                  const_shift)
-        if fitIndx == None:
+        if fitIndx is None:
             pass
         else:
             show_correct_model(models, fitIndx, qcut, iqcut, const_shift,
@@ -84,7 +84,7 @@ class PhaseIdentification:
         clf = get_NN()
         bestMatch = identify_phase_nn(models, qcut, iqcut, clf, numPeaks,
                                       q_dep_shift, const_shift)
-        if bestMatch == None:
+        if bestMatch is None:
             pass
         else:
             show_correct_model(models, bestMatch, qcut, iqcut, const_shift,
@@ -96,8 +96,8 @@ class PhaseIdentification:
         pickle_nn(clf)
 
     def _split_read_data(self, fileName, cutDataStart):
-        qcut, iqcut = read_data(self.fileName, self.cutDataStart)
-        return qcut, iqcut
+        qcut, iqcut, numPeaks = read_data(self.fileName, self.cutDataStart)
+        return qcut, iqcut, numPeaks
 
     def _split_identify_phase(self, models, qcut, iqcut):
         fitIndx = identify_phase(self.models, self.qcut, self.iqcut)

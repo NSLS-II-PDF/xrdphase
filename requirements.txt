@@ -1,11 +1,8 @@
 # List required packages in this file, one per line.
-ipython
 fire
-ipywidgets
 matplotlib
 numpy
 pandas
 pymatgen
 scikit-learn>=0.18
 scipy>=1.1.0
-
