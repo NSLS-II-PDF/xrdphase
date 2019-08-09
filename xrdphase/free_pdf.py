@@ -702,11 +702,11 @@ def make_sq_from_gr(r,gr,qmax=None,delq=None,qmin=None,rmin=None,rmax=None):
         rmax = r[-1]
     if rmin == None:
         rmin = r[0]
-    
+
     selected_mask = np.where(np.logical_and(r>=rmin, r<=rmax))
     user = r[selected_mask]
-    usegr = gr[selected_mask]    
-    
+    usegr = gr[selected_mask]
+
     usegr = np.nan_to_num(usegr)
     sq = debye_scattering(user, usegr, q)/(5*np.pi)
 
@@ -730,10 +730,10 @@ def read_pdfgui_gr(filename,junk=3,backjunk = 2):
         datain = datain[junk:]
     else:
         datain = datain[junk:-backjunk]
-    
+
     xin = np.zeros(len(datain))
     yin = np.zeros(len(datain))
-    
+
     print ('length '+str(len(xin)))
     for i in range(len(datain)):
         xin[i]= float(datain[i].split()[0])
@@ -743,16 +743,16 @@ def read_pdfgui_gr(filename,junk=3,backjunk = 2):
 def my_first_convolution_gauss(rlist,data,wid,use_delq_over_q=False,dqoq_power = 1):
     new_data = np.zeros(len(data))
     for i in range(len(rlist)):
-        r = rlist[i]   
+        r = rlist[i]
         if use_delq_over_q:
             use_wid = wid*r**dqoq_power
         else:
             use_wid = wid
         #now build up the gaussian profile
         weights = gauss(rlist, use_wid, r)
-        weights = weights / sum(weights)   
+        weights = weights / sum(weights)
         new_data[i] = sum(weights * data)
-    
+
     return new_data
 
 
@@ -760,9 +760,9 @@ def find_nearest(array,value):
     idx = (np.abs(array-value)).argmin()
     return idx #array[idx]
 
-def top_down_plot(data,**kwargs):    
+def top_down_plot(data,**kwargs):
     """plots 2D data from a pandas dataframe.  Requires that both index and column values of data frame be numeric!
-    Optional arguments are colormap minimum and maximum (cmin, cmax), colormap to use (cmap), x-min and x-max 
+    Optional arguments are colormap minimum and maximum (cmin, cmax), colormap to use (cmap), x-min and x-max
     (xmin, xmax), y-value min and max (ymin, ymax),  if you want gouraud-style blurring (blur = True, default False),
     and if you want a colorbar plotted (colorbar = True, default False)"""
 
@@ -779,7 +779,7 @@ def top_down_plot(data,**kwargs):
     ymax = max(data.columns)
     shading_choice = 'None'
     use_colorbar = False
-    
+
     if kwargs is not None:
         for key, value in kwargs.items():
             #print ("%s set to %s" %(key,value))
@@ -823,7 +823,7 @@ def is_number(arg1):
 def calc_rw(indata,infit,return_crw = False):
     fit = np.array(infit)
     data = np.array(indata)
-    
+
     if return_crw == False:
         top = sum((data-fit)**2.0)
         bottom = sum(data**2.0)
@@ -844,32 +844,25 @@ def calc_rw(indata,infit,return_crw = False):
                 vals[i] = 0.0
         vals = vals**(0.5)
         return vals
-    
-            
+
+
 def calc_residual(y1,y2,return_sum = True,return_abs = True):
     res = np.zeros(len(y1))
     if  return_abs == False:
         res = (y1 - y2)
     if return_abs == True:
         res = abs(y1 - y2)
-        
+
     if return_sum:
         return res.sum()
     else:
         return res
 
 def cut_data(qt,sqt,qmin,qmax):
-    qcut = []
-    sqcut = []
-    for i in range(len(qt)):
-        if qt[i] >= qmin and qt[i] <= qmax:
-            qcut.append(qt[i])
-            sqcut.append(sqt[i])
+    qt_back, sqt_back = qt[qt > qmin], sqt[qt > qmin]
+    qt_back, sqt_back = qt_back[qt_back < qmax], sqt_back[qt_back < qmax]
+    return qt_back, sqt_back
 
-    qcut = np.array(qcut)
-    sqcut = np.array(sqcut)
-    return qcut, sqcut       
-        
 def read_twocol_data(filename,junk=0,backjunk = 0, splitchar=None, do_not_float=False, shh=False):
     with open(filename,'r') as infile:
         datain = infile.readlines()
@@ -877,10 +870,10 @@ def read_twocol_data(filename,junk=0,backjunk = 0, splitchar=None, do_not_float=
         datain = datain[junk:]
     else:
         datain = datain[junk:-backjunk]
-    
+
     xin = np.zeros(len(datain))
     yin = np.zeros(len(datain))
-    
+
     if shh == False:
         print ('length '+str(len(xin)))
     if do_not_float:
@@ -891,8 +884,8 @@ def read_twocol_data(filename,junk=0,backjunk = 0, splitchar=None, do_not_float=
         else:
             for i in range(len(datain)):
                 xin[i]= (datain[i].split(splitchar)[0])
-                yin[i]= (datain[i].split(splitchar)[1])    
-    else:        
+                yin[i]= (datain[i].split(splitchar)[1])
+    else:
         if splitchar==None:
             for i in range(len(datain)):
                 xin[i]= float(datain[i].split()[0])
@@ -900,23 +893,23 @@ def read_twocol_data(filename,junk=0,backjunk = 0, splitchar=None, do_not_float=
         else:
             for i in range(len(datain)):
                 xin[i]= float(datain[i].split(splitchar)[0])
-                yin[i]= float(datain[i].split(splitchar)[1])   
-        
+                yin[i]= float(datain[i].split(splitchar)[1])
+
     return xin,yin
-    
+
 def similarity_matrix(df,use_abs=True,rmin=0,rmax=100):
     score_matrix = np.zeros([len(df.columns),len(df.columns)])
-    
+
     for y1i in range(len(df.columns)):
         col1 = df.columns[y1i]
         for y2i in range(len(df.columns)):
             col2 = df.columns[y2i]
             score_matrix[y1i,y2i] = calc_residual(df.loc[rmin:rmax,col1],df.loc[rmin:rmax,col2],return_sum=True,return_abs=use_abs)
-    
+
     df_score = pd.DataFrame(data = score_matrix, index=df.columns, columns= df.columns)
-    
+
     return df_score
-    
+
 def single_parent_difference(mom,df,return_sum=True,abs_score = True):
     score_matrix = np.zeros([len(df.index),len(df.columns)])
     res_array = df.copy(deep=True)
@@ -925,17 +918,17 @@ def single_parent_difference(mom,df,return_sum=True,abs_score = True):
 
     if abs_score:
         res_array = res_array.abs()
-        
+
     if return_sum:
         return res_array.sum()
     else:
         return res_array
-    
+
 def two_parent_combo(mom,mom_frac,dad,dad_frac):
     return mom*mom_frac + dad*dad_frac
 
 def solve_parent_fraction(mom,dad,df):
-    
+
     def two_parent_simple_combo(r,mom_frac):
         return mom*mom_frac + dad * (1-mom_frac)
 
@@ -944,21 +937,21 @@ def solve_parent_fraction(mom,dad,df):
     return popt[0]
 
 def try_all_the_things(mom,dad,df,num_pts=101,confidence = 0.05,return_error_bars = True,return_full_res_map = False):
-    
+
     df_phi_score = pd.DataFrame(index=np.linspace(0,1,num_pts),columns=df.columns,data=0)
 
-    
+
     best_phi_list = []
     best_res_list = []
 
     if confidence > 1.0:
         confidence *= .01
-    
+
     for cols in df_phi_score.columns:
-        
+
         best_phi = 0
         best_res = 1e15
-        
+
         test_data = df.loc[:,cols]
         for rows in df_phi_score.index:
             fit_frac = rows
@@ -969,16 +962,16 @@ def try_all_the_things(mom,dad,df,num_pts=101,confidence = 0.05,return_error_bar
                 best_phi = fit_frac
 
             df_phi_score.loc[rows,cols] = this_res
-        
+
         best_phi_list.append(best_phi)
         best_res_list.append(best_res)
-        
+
     best_phi_list = np.array(best_phi_list)
     best_res_list = np.array(best_res_list)
-    
+
     wbp_low_list = []
     wbp_high_list = []
-    
+
     if return_error_bars:
         for i in range(len(df_phi_score.columns)):
             cols = df.columns[i]
@@ -1011,41 +1004,41 @@ def try_all_the_things(mom,dad,df,num_pts=101,confidence = 0.05,return_error_bar
             return best_phi_list, best_res_list, wbp_high_list, wbp_low_list
         else : #return the full res_map
             return best_phi_list, best_res_list, wbp_high_list, wbp_low_list,df_phi_score
-    
+
     else : #don't bother with error bars
         if return_full_res_map == False:
             return best_phi_list, best_res_list
         else : #return the full res_map
             return best_phi_list,best_res,df_phi_score
-            
+
 def write_out_file(filename,x,y):
     outf = open(filename,'w')
     for i in range(len(x)):
         outf.write(str(x[i])+' '+str(y[i])+'\n')
     outf.close()
-    
+
 def make_df_full_set(file_preface,tstart = 19,tend = 22):
     file_list = glob.glob(file_preface+'*')
-    
+
     tlist = np.zeros(len(file_list))
     for i in range(len(file_list)):
         tlist[i] = float(file_list[i][tstart:tend])
-    
+
     r,gr = read_twocol_data(file_list[0],junk=5,shh=True)
-    
+
     this_df = pd.DataFrame(index=r)
     this_df[tlist[0]] = gr
-    
+
     for i in range(1,len(tlist)):
         r,gr = read_twocol_data(file_list[i],junk=5,shh=True)
         this_df[tlist[i]] = gr
-    
-    return this_df  
+
+    return this_df
 
 def read_index_data_smart(filename,junk=None,backjunk=None,splitchar=None, do_not_float=False, shh=True, use_idex=[0,1]):
     with open(filename,'r') as infile:
         datain = infile.readlines()
-    
+
     if junk == None:
         for i in range(len(datain)):
             try:
@@ -1055,7 +1048,7 @@ def read_index_data_smart(filename,junk=None,backjunk=None,splitchar=None, do_no
                 break
             except:
                 pass #print ('nope')
-                
+
     if backjunk == None:
         for i in range(len(datain),-1,-1):
             try:
@@ -1065,22 +1058,22 @@ def read_index_data_smart(filename,junk=None,backjunk=None,splitchar=None, do_no
             except:
                 pass
                 #print ('nope')
-    
+
     #print ('found junk '+str(junk))
     #print ('and back junk '+str(backjunk))
-            
+
     if backjunk == 0:
         datain = datain[junk:]
     else:
         datain = datain[junk:-backjunk]
-    
+
     xin = np.zeros(len(datain))
     yin = np.zeros(len(datain))
-    
+
     if do_not_float:
         xin = []
         yin = []
-    
+
     if shh == False:
         print ('length '+str(len(xin)))
     if do_not_float:
@@ -1091,8 +1084,8 @@ def read_index_data_smart(filename,junk=None,backjunk=None,splitchar=None, do_no
         else:
             for i in range(len(datain)):
                 xin.append(datain[i].split(splitchar)[use_idex[0]])
-                yin.append(datain[i].split(splitchar)[use_idex[1]])    
-    else:        
+                yin.append(datain[i].split(splitchar)[use_idex[1]])
+    else:
         if splitchar==None:
             for i in range(len(datain)):
                 xin[i]= float(datain[i].split()[use_idex[0]])
@@ -1100,12 +1093,12 @@ def read_index_data_smart(filename,junk=None,backjunk=None,splitchar=None, do_no
         else:
             for i in range(len(datain)):
                 xin[i]= float(datain[i].split(splitchar)[use_idex[0]])
-                yin[i]= float(datain[i].split(splitchar)[use_idex[1]])   
-        
-    return xin,yin     
-    
+                yin[i]= float(datain[i].split(splitchar)[use_idex[1]])
+
+    return xin,yin
+
 def read_filelist_into_dataframe(file_list, pref_name, junk=5, return_idex_version=False,postname_len=4,backjunk=0):
-    """ taking a file_list, remove common 'pref_name' from each file (used for column labels) and return a dataframe with 2-column 
+    """ taking a file_list, remove common 'pref_name' from each file (used for column labels) and return a dataframe with 2-column
     data read accordingly.  junk=length of header data to skip in each file.  backjunk=similar, but end of file.
     postname_len = length of filename to cut off of column-labels (i.e. .dat would be removed if postname_len = 4)"""
     pref_len = len(pref_name)
@@ -1120,30 +1113,30 @@ def read_filelist_into_dataframe(file_list, pref_name, junk=5, return_idex_versi
 
         q,sq = read_twocol_data(file_list[i],junk=junk,backjunk=backjunk,shh=True)
         df_all_sq[this_column_name] = sq
-    
-    
+
+
     return df_all_sq
-    
-    
+
+
 def batch_process_dfsq_pz_corrections(df_sqfg,bgd,rescale_bgd=1.0,plaz_type=None,
                                      gauss_damp=False,gw=20.0,qmax=None,qmin=None,
                                      rmin=0.0,rmax=20.0,delr=.02
                                      ,qminpla=10.0,qmaxpla=30.0,ndeg=2, return_correction = False,
                                     skip_bgd = False, return_final_sq = False, force_qmax_type='Off'):
     """
-    Provide a dataframe (foreground) and a numpy-array background, and batch process the PDFs using the same methods as 
-    are found in do_reduction_placzek_corrections, returned in a new dataframe.  Note that return_final_sq and 
+    Provide a dataframe (foreground) and a numpy-array background, and batch process the PDFs using the same methods as
+    are found in do_reduction_placzek_corrections, returned in a new dataframe.  Note that return_final_sq and
     return_correction WILL work, and you will get a dataframe of the final S(Q)/corrections in Q-space.
     """
-    
+
     if isinstance(df_sqfg, pd.DataFrame) == False:
         print ("You did not pass me a dataframe.  I am sad now.")
         return None
-    
-    else: 
-        
+
+    else:
+
         if return_correction == False and return_final_sq == False:
-           
+
             q = np.array(df_sqfg.index)
             r, first_gr = do_reduction_placzek_corrections(q, np.array(df_sqfg.iloc[:,0]), bgd,
                                                             rescale_bgd=rescale_bgd,skip_bgd =skip_bgd,
@@ -1151,7 +1144,7 @@ def batch_process_dfsq_pz_corrections(df_sqfg,bgd,rescale_bgd=1.0,plaz_type=None
                                                             qmin=qmin,qmax=qmax,
                                                             force_qmax_type=force_qmax_type,
                                                             plaz_type = plaz_type, qminpla=qminpla,qmaxpla=qmaxpla,
-                                                            rmax=rmax,delr =delr,rmin=rmin)      
+                                                            rmax=rmax,delr =delr,rmin=rmin)
             df_all_gr = pd.DataFrame(index=r)
             df_all_gr[df_sqfg.columns[0]] = first_gr
 
@@ -1164,13 +1157,13 @@ def batch_process_dfsq_pz_corrections(df_sqfg,bgd,rescale_bgd=1.0,plaz_type=None
                                                                 qmin=qmin,qmax=qmax,
                                                                 force_qmax_type=force_qmax_type,
                                                                 plaz_type = plaz_type, qminpla=qminpla,qmaxpla=qmaxpla,
-                                                                rmax=rmax,delr =delr,rmin=rmin)            
+                                                                rmax=rmax,delr =delr,rmin=rmin)
                 df_all_gr[col] = this_gr
 
             return df_all_gr
-        
+
         else:
-            
+
             q = np.array(df_sqfg.index)
             sqback = do_reduction_placzek_corrections(q, np.array(df_sqfg.iloc[:,0]), bgd,
                                                             rescale_bgd=rescale_bgd,skip_bgd =skip_bgd,
@@ -1178,9 +1171,9 @@ def batch_process_dfsq_pz_corrections(df_sqfg,bgd,rescale_bgd=1.0,plaz_type=None
                                                             qmin=qmin,qmax=qmax,
                                                             force_qmax_type=force_qmax_type,
                                                             plaz_type = plaz_type, qminpla=qminpla,qmaxpla=qmaxpla,
-                                                            rmax=rmax,delr =delr,rmin=rmin, 
+                                                            rmax=rmax,delr =delr,rmin=rmin,
                                                             return_correction=return_correction,
-                                                            return_final_sq= return_final_sq)      
+                                                            return_final_sq= return_final_sq)
             df_back_sq = pd.DataFrame(index=q)
             df_back_sq[df_sqfg.columns[0]] = sqback
 
@@ -1195,7 +1188,7 @@ def batch_process_dfsq_pz_corrections(df_sqfg,bgd,rescale_bgd=1.0,plaz_type=None
                                                                 plaz_type = plaz_type, qminpla=qminpla,qmaxpla=qmaxpla,
                                                                 rmax=rmax,delr =delr,rmin=rmin,
                                                                 return_correction=return_correction,
-                                                                return_final_sq= return_final_sq)  
+                                                                return_final_sq= return_final_sq)
                 df_back_sq[col] = this_sqback
 
-            return df_back_sq    
+            return df_back_sq
