@@ -8,8 +8,6 @@ import matplotlib.pyplot as plt
 from pymatgen import MPRester
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
-import random
-from sklearn.neural_network import MLPClassifier
 import pickle
 
 
@@ -99,28 +97,28 @@ def cut_data(qt, sqt, qmin, qmax):
 
 
 def read_index_data_smart(filename, junk=None, backjunk=None, splitchar=None,
-                          do_not_float=False, shh=True, use_idex=[0,1]):
-    with open(filename,'r') as infile:
+                          do_not_float=False, shh=True, use_idex=[0, 1]):
+    with open(filename, 'r') as infile:
         datain = infile.readlines()
-    if junk == None:
+    if junk is None:
         for i in range(len(datain)):
             try:
                 for j in range(10):
-                    x1,y1 = (float(datain[i+j].split(splitchar)[use_idex[0]]),
-                             float(datain[i+j].split(splitchar)[use_idex[1]]))
+                    float(datain[i+j].split(splitchar)[use_idex[0]])
+                    float(datain[i+j].split(splitchar)[use_idex[1]])
                 junk = i
                 break
-            except:
+            except Exception:
                 pass
 
-    if backjunk == None:
-        for i in range(len(datain),-1,-1):
+    if backjunk is None:
+        for i in range(len(datain), -1, -1):
             try:
-                x1,y1 = (float(datain[i].split(splitchar)[use_idex[0]]),
-                         float(datain[i].split(splitchar)[use_idex[1]]))
+                float(datain[i].split(splitchar)[use_idex[0]])
+                float(datain[i].split(splitchar)[use_idex[1]])
                 backjunk = len(datain)-i-1
                 break
-            except:
+            except Exception:
                 pass
     if backjunk == 0:
         datain = datain[junk:]
@@ -131,10 +129,10 @@ def read_index_data_smart(filename, junk=None, backjunk=None, splitchar=None,
     if do_not_float:
         xin = []
         yin = []
-    if shh == False:
-        print ('length '+str(len(xin)))
+    if shh is False:
+        print('length '+str(len(xin)))
     if do_not_float:
-        if splitchar==None:
+        if splitchar is None:
             for i in range(len(datain)):
                 xin.append(datain[i].split()[use_idex[0]])
                 yin.append(datain[i].split()[use_idex[1]])
@@ -143,16 +141,16 @@ def read_index_data_smart(filename, junk=None, backjunk=None, splitchar=None,
                 xin.append(datain[i].split(splitchar)[use_idex[0]])
                 yin.append(datain[i].split(splitchar)[use_idex[1]])
     else:
-        if splitchar==None:
+        if splitchar is None:
             for i in range(len(datain)):
-                xin[i]= float(datain[i].split()[use_idex[0]])
-                yin[i]= float(datain[i].split()[use_idex[1]])
+                xin[i] = float(datain[i].split()[use_idex[0]])
+                yin[i] = float(datain[i].split()[use_idex[1]])
         else:
             for i in range(len(datain)):
-                xin[i]= float(datain[i].split(splitchar)[use_idex[0]])
-                yin[i]= float(datain[i].split(splitchar)[use_idex[1]])
+                xin[i] = float(datain[i].split(splitchar)[use_idex[0]])
+                yin[i] = float(datain[i].split(splitchar)[use_idex[1]])
 
-    return xin,yin
+    return xin, yin
 
 
 def bgd_func(qcut, iqcutStart, iqcutEnd):
@@ -325,7 +323,7 @@ def identify_phase(models, qcut, iqcut, q_dep_shift=1.0, const_shift=0.0):
 
         for i in range(len(model_num)):
             x_val_mod.append(convert_tth_to_q(model_num[i][2])*.995*q_dep_shift
-                             +const_shift)
+                             + const_shift)
             y_val_mod.append(model_num[i][0])
             # choosing the peaks to use based on where the data starts
             if x_val_mod[i] >= qcut[0]:
@@ -530,7 +528,7 @@ def identify_phase_nn(models, qcut, iqcut, clf, numPeaks, q_dep_shift=1.0,
         # read in model peak positions, convert to Q
         for i in range(len(model_num)):
             x_val_mod.append(convert_tth_to_q(model_num[i][2])*.995*q_dep_shift
-                             +const_shift)
+                             + const_shift)
             y_val_mod.append(model_num[i][0])
 
             if x_val_mod[i] >= qcut[0]:
@@ -542,7 +540,7 @@ def identify_phase_nn(models, qcut, iqcut, clf, numPeaks, q_dep_shift=1.0,
 
             for i in range(len(effective_peak_x)):
                 qcutM, iqcutM = cut_data_length(qcut, iqcut,
-                effective_peak_x[i]-.2, 18)
+                                                effective_peak_x[i]-.2, 18)
                 bgd = bgd_func(qcutM, iqcutM[0], iqcutM[-1])
 
                 iqcutNoBgd = np.zeros_like(iqcutM)
@@ -575,7 +573,6 @@ def identify_phase_nn(models, qcut, iqcut, clf, numPeaks, q_dep_shift=1.0,
         else:
             fitBool.append(1)
 
-    resSumList = []
     bestMatch = predModelNum[matchPercentList.index(max(matchPercentList))]
     print("I think you're looking at " +
           models[bestMatch]['spacegroup']['symbol'] + ", " +
@@ -627,8 +624,8 @@ def show_correct_model(models, fitIndx, qcut, iqcut, const_shift=0.0,
     model_num = models[fitIndx]['xrd.Cu']['pattern']
 
     for i in range(len(model_num)):
-        x_val_mod.append(convert_tth_to_q(model_num[i][2])*.995*q_dep_shift+
-                             const_shift)
+        x_val_mod.append(convert_tth_to_q(model_num[i][2])*.995*q_dep_shift +
+                         const_shift)
         y_val_mod.append(model_num[i][0])
         if x_val_mod[i] >= qcut[0]:
             effective_peak_x.append(x_val_mod[i])
