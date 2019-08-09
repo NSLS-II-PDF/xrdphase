@@ -84,16 +84,9 @@ def find_nearest(array, value):
 
 
 def cut_data(qt, sqt, qmin, qmax):
-    qcut = []
-    sqcut = []
-    for i in range(len(qt)):
-        if qt[i] >= qmin and qt[i] <= qmax:
-            qcut.append(qt[i])
-            sqcut.append(sqt[i])
-
-    qcut = np.array(qcut)
-    sqcut = np.array(sqcut)
-    return qcut, sqcut
+    qt_back, sqt_back = qt[qt > qmin], sqt[qt > qmin]
+    qt_back, sqt_back = qt_back[qt_back < qmax], sqt_back[qt_back < qmax]
+    return qt_back, sqt_back
 
 
 def read_index_data_smart(filename, junk=None, backjunk=None, splitchar=None,
