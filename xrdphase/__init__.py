@@ -15,8 +15,8 @@ class PhaseIdentification:
         show_correct_model(models, fitIndx, qcut, iqcut)
 
     def _split_read_data(self, fileName, cutDataStart):
-        qcut, iqcut = read_data(fileName, cutDataStart)
-        return qcut, iqcut
+        qcut, iqcut, numPeaks = read_data(fileName, cutDataStart)
+        return qcut, iqcut, numPeaks
 
     def _split_identify_phase(self, models, qcut, iqcut):
         fitIndx = identify_phase(models, qcut, iqcut)
