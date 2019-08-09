@@ -96,8 +96,8 @@ class PhaseIdentification:
         pickle_nn(clf)
 
     def _split_read_data(self, fileName, cutDataStart):
-        qcut, iqcut = read_data(self.fileName, self.cutDataStart)
-        return qcut, iqcut
+        qcut, iqcut, numPeaks = read_data(self.fileName, self.cutDataStart)
+        return qcut, iqcut, numPeaks
 
     def _split_identify_phase(self, models, qcut, iqcut):
         fitIndx = identify_phase(self.models, self.qcut, self.iqcut)
