@@ -1,10 +1,8 @@
-
+from .phase_id_functions import get_structures, read_data
+from .phase_id_functions import identify_phase, show_correct_model
 from ._version import get_versions
 __version__ = get_versions()['version']
 del get_versions
-
-from .phase_id_functions import get_structures, read_data
-from .phase_id_functions import identify_phase, show_correct_model
 
 
 class PhaseIdentification:
