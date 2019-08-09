@@ -6,7 +6,6 @@ similar crystal phase of a material using X-ray diffraction at a beamline.
 import numpy as np
 import matplotlib.pyplot as plt
 from pymatgen import MPRester
-from xrdphase.free_pdf import find_nearest, cut_data, read_index_data_smart
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 import random
@@ -79,6 +78,81 @@ def read_data(fileName, startCut):
     peaks, _ = find_peaks(iqcutN, prominence=0.02)
     numPeaks = len(peaks)
     return qcut, iqcut, numPeaks
+
+
+def find_nearest(array, value):
+    idx = (np.abs(array-value)).argmin()
+    return idx
+
+
+def cut_data(qt, sqt, qmin, qmax):
+    qcut = []
+    sqcut = []
+    for i in range(len(qt)):
+        if qt[i] >= qmin and qt[i] <= qmax:
+            qcut.append(qt[i])
+            sqcut.append(sqt[i])
+
+    qcut = np.array(qcut)
+    sqcut = np.array(sqcut)
+    return qcut, sqcut
+
+
+def read_index_data_smart(filename, junk=None, backjunk=None, splitchar=None,
+                          do_not_float=False, shh=True, use_idex=[0,1]):
+    with open(filename,'r') as infile:
+        datain = infile.readlines()
+    if junk == None:
+        for i in range(len(datain)):
+            try:
+                for j in range(10):
+                    x1,y1 = (float(datain[i+j].split(splitchar)[use_idex[0]]),
+                             float(datain[i+j].split(splitchar)[use_idex[1]]))
+                junk = i
+                break
+            except:
+                pass
+
+    if backjunk == None:
+        for i in range(len(datain),-1,-1):
+            try:
+                x1,y1 = (float(datain[i].split(splitchar)[use_idex[0]]),
+                         float(datain[i].split(splitchar)[use_idex[1]]))
+                backjunk = len(datain)-i-1
+                break
+            except:
+                pass
+    if backjunk == 0:
+        datain = datain[junk:]
+    else:
+        datain = datain[junk:-backjunk]
+    xin = np.zeros(len(datain))
+    yin = np.zeros(len(datain))
+    if do_not_float:
+        xin = []
+        yin = []
+    if shh == False:
+        print ('length '+str(len(xin)))
+    if do_not_float:
+        if splitchar==None:
+            for i in range(len(datain)):
+                xin.append(datain[i].split()[use_idex[0]])
+                yin.append(datain[i].split()[use_idex[1]])
+        else:
+            for i in range(len(datain)):
+                xin.append(datain[i].split(splitchar)[use_idex[0]])
+                yin.append(datain[i].split(splitchar)[use_idex[1]])
+    else:
+        if splitchar==None:
+            for i in range(len(datain)):
+                xin[i]= float(datain[i].split()[use_idex[0]])
+                yin[i]= float(datain[i].split()[use_idex[1]])
+        else:
+            for i in range(len(datain)):
+                xin[i]= float(datain[i].split(splitchar)[use_idex[0]])
+                yin[i]= float(datain[i].split(splitchar)[use_idex[1]])
+
+    return xin,yin
 
 
 def bgd_func(qcut, iqcutStart, iqcutEnd):
